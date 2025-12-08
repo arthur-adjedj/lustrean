@@ -6,13 +6,19 @@ require "leanprover-community" / "LeanSearchClient" @ git "3591c3f664ac3719c4c86
 package "lustrean" where
   version := v!"0.1.0"
 
+@[default_target]
+lean_lib Lustrean where
+  leanOptions := #[
+    ⟨`autoImplicit, false⟩
+  ]
+
 lean_lib Misc where
   leanOptions := #[
     ⟨`autoImplicit, false⟩
   ]
 
-@[default_target]
-lean_lib Lustrean where
+@[test_driver]
+lean_lib Test where
   leanOptions := #[
     ⟨`autoImplicit, false⟩
   ]
