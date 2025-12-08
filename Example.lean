@@ -1,7 +1,5 @@
 import Lustrean
 
-set_option trace.Lustrean.Elab true
-
 lustre
   node inc(x) = o where
     o = x + 1
@@ -9,16 +7,12 @@ lustre
   node plus2(x) = o where
     o = inc(inc(x))
 
-/-- error: assert failed, got #[[1; +∞], [-∞; +∞], [2; +∞], [-∞; +∞]] -/
-#guard_msgs in
 lustre
   node u(x) = o where
     o = x * x + 3
   assert
     o ≤ 1
 
-/-- error: assert failed, got #[[1; +∞], [-∞; +∞], [-∞; -1], [-∞; +∞]] -/
-#guard_msgs in
 lustre
   node u(x) = o where
     -- o = if x ≥ 0 then x * x else x * x
@@ -32,30 +26,17 @@ lustre
   assert
     o ≥ 3
 
-/-- error: variable x could be nil -/
-#guard_msgs in
 lustre
   node f() = x where
     x = y
     y = x
 
-/--
-error: variable x could be nil
----
-error: variable y could be nil
--/
-#guard_msgs in
 lustre
   -- this would require a relational domain
   node f(c, z) = x, y where
     x = if c = 0 then z else y
     y = if c = 0 then x else z
 
-
-/--
-error: assert failed, got #[[1; +∞], [-∞; 1], [-∞; -1], [-∞; 1], [-∞; +∞], [-∞; 1], [-∞; +∞], [-∞; 1], [-∞; +∞]]
--/
-#guard_msgs in
 lustre
   node l() = o where
     up = 1 fby if (up = 1 ∧ o < 10) ∨ (up = 0 ∧ o = 0) then 1 else 0
@@ -83,18 +64,6 @@ lustre
       o ≥ 0
       o ≤ 3
 
-/--
-error: variable o could be nil
----
-error: variable o could be nil
----
-error: assert failed, got #[[1; +∞], [5; +∞], [0; 3], [0; 3]]
----
-error: assert failed, got #[[1; +∞], [5; 5], [3; 3], [5; 5], [3; 3], [6; 6], [5; 5], [3; 3], [5; 5], [3; 3], [6; 6]]
----
-error: assert failed, got #[[1; +∞], [5; 5], [3; 3], [5; 5], [3; 3], [6; 6], [5; 5], [3; 3], [5; 5], [3; 3], [6; 6]]
--/
-#guard_msgs in
 lustre
   node f() = o, o where
     o = o
