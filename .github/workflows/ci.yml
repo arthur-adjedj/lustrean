@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: "run `lean-action` with only `lean4checker: true`"
+      - name: "run `lean-action`"
         id: lean-action
         uses: leanprover/lean-action@v1
         with:
