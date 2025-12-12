@@ -1,23 +1,30 @@
 import Lustrean.Domain.NonRelational
-import Lustrean.Domain.GaloisConnection
+-- import Lustrean.Domain.GaloisConnection
+import Mathlib.Order.GaloisConnection.Defs
+import Mathlib.Order.Defs.PartialOrder
 
 namespace Lustrean.Domain
 
+-- TODO: Fix up
 attribute [local simp] Int.compare_eq_gt Int.compare_eq_lt
+
 private def Int.compare_eq_of_lt a b := @Int.compare_eq_lt a b  |>.mpr
-local grind_pattern Int.compare_eq_of_lt => compare a b
-private def Int.compare_eq_of_eq a b := @Int.compare_eq_eq a b  |>.mpr
-local grind_pattern Int.compare_eq_of_eq => compare a b
+local grind_pattern Int.compare_eq_of_lt => compare a b, a + 1 ≤ b
+-- TODO: Consider if using a+1 ≤ b is required, instead of a < b
+
+local grind_pattern Std.compare_self => compare a a
+
 private def Int.compare_eq_of_gt a b := @Int.compare_eq_gt a b  |>.mpr
-local grind_pattern Int.compare_eq_of_gt => compare a b
+local grind_pattern Int.compare_eq_of_gt => compare a b, b + 1 ≤ a
+-- TODO: Consider if using b+1 ≤ a is required, instead of a > b
 
 
 /-- Abstraction over sets of integers. The only
  information retained is the sign of the elements
  of the set.  -/
 structure Sign where mk ::
- hasZero: Bool := false
  hasPos: Bool  := false
+ hasZero: Bool := false
  hasNeg: Bool  := false
  deriving DecidableEq, Repr, Inhabited
 
@@ -41,14 +48,14 @@ def All: Sign := None.opposite
 end elements
 
 instance: Std.ToFormat Sign where format := fun
-|.mk false false false => "[⊥]"
-|.mk true  false false => "[=0]"
-|.mk false true  false => "[>0]"
-|.mk false false true  => "[<0]"
-|.mk true  true  false => "[≥0]"
-|.mk true  false true  => "[≤0]"
-|.mk false true  true  => "[≠0]"
-|.mk true  true  true  => "[⊤]"
+|.mk false false  false => "[⊥]"
+|.mk false false  true  => "[<0]"
+|.mk false true   false => "[=0]"
+|.mk true  false  false => "[>0]"
+|.mk false true   true  => "[≤0]"
+|.mk true  false  true  => "[≠0]"
+|.mk true  true   false => "[≥0]"
+|.mk true  true   true  => "[⊤]"
 instance: ToString Sign := ⟨toString ∘ Std.format⟩
 instance: Repr Sign := ⟨fun a _ => Std.format a⟩
 
@@ -119,6 +126,41 @@ def incl(a b: Sign): Bool :=
   !(a.hasPos  && !b.hasPos ) &&
   !(a.hasNeg  && !b.hasNeg )
 
+/- TODO: Improve -/
+def restrictLE: Sign → Sign → Sign
+| ⟨p,z,n⟩, ⟨true, _, _⟩          => ⟨p,z,n⟩
+| ⟨_,z,n⟩, ⟨false, true, _⟩      => ⟨false, z, n⟩
+-- Again, one cannot be perfect for LT here, since we could have e ∈ x' st e < 0
+-- but this doesn't imply there is some e' ∈ y such that e < e'.  We need to
+-- make an overapproximation
+| ⟨_,_,n⟩, ⟨false, false, true⟩  => ⟨false,false,n⟩
+| ⟨_,_,_⟩, ⟨false, false, false⟩ => ⟨false,false,false⟩
+
+def restrictLT: Sign → Sign → Sign
+| ⟨p,z,n⟩, ⟨true, _, _⟩          => ⟨p,z,n⟩
+| ⟨_,_,n⟩, ⟨false, true, _⟩      => ⟨false, false, n⟩
+-- Again, one cannot be perfect for LT here, since we could have e ∈ x' st e < 0
+-- but this doesn't imply there is some e' ∈ y such that e < e'.  We need to
+-- make an overapproximation
+| ⟨_,_,_⟩, ⟨false, false, _⟩  => ⟨false,false,false⟩
+
+-- TODO: Fix
+def restrict(ord: Ordering)(x y: Sign): Sign := match ord with
+| .lt => x.restrictLT y
+| .eq => x.meet y
+| .gt => x.neg.restrictLT y.neg |>.neg
+
+-- TODO: Fix
+def compare' (op: Lustrean.CompareOp) (x y: Sign): Sign × Sign := match op with
+  | .eq  => (x.restrict .eq y, y.restrict .eq x)
+  | .lt  => (x.restrict .lt y, y.restrict .lt x)
+  | .neq => ((x.restrict .lt y).meet  (x.restrict .gt y),
+             (y.restrict .lt x).meet  (y.restrict .gt x))
+  | .le  => (x.restrictLE y, y.restrictLE x)
+  | .ge  => compare' .le y  x
+  | .gt  => compare' .lt y  x
+termination_by (match op with |.ge => 2 |.le|.gt => 1 |_ => 0)
+
 end Sign
 
 instance: Add Sign := .mk Sign.add
@@ -130,102 +172,139 @@ instance: Widen Sign  where widen a b _ := a.join b
 instance: Narrow Sign where narrow a b _ := a.meet b
 
 section GaloisEmbedding
-  /-- The concrete domain of Sign is the set of (computable)
-      subsets of integers. -/
-  abbrev Set α := α → Bool
+/-- The concrete domain of Sign is the set of (computable)
+    subsets of integers. -/
+abbrev Set α := α → Bool
 
-  /-- We establish a partial order on sets through inclusion -/
-  protected instance: LE (Set Int) where
-    le f g := ∀ x, f x -> g x
-  protected instance: Std.IsPartialOrder (Set Int) where
-    le_refl := by intros f g a; assumption
-    le_trans := by intros f g h fg gh a fa; apply (gh _ (fg a fa))
-    le_antisymm := by
-      intros f g fg gf
-      ext x
-      specialize fg x
-      specialize gf x
-      cases h: (f x) <;> grind
+/-- We establish a partial order on sets through inclusion -/
+@[grind =]
+instance instLESetInt: LE (Set Int) where
+  le f g := ∀ x, f x -> g x
+instance instPartialOrderSetInt: PartialOrder (Set Int) where
+  le_refl := by intros f g a; assumption
+  le_trans := by intros f g h fg gh a fa; apply (gh _ (fg a fa))
+  le_antisymm := by
+    intros f g fg gf
+    ext x
+    specialize fg x
+    specialize gf x
+    cases h: (f x) <;> grind
 
-  /-- Inclusion of Sign elements establishes a partial order -/
-  instance: LE Sign where
-    le x y := Sign.incl x y = true
-  /-- Inclusion of Sign elements establishes a partial order -/
-  instance: Std.IsPartialOrder Sign where
-    le_refl := by simp [LE.le, Sign.incl]
-    le_trans := by
-      intros; simp [LE.le, Sign.incl] at *; grind
-    le_antisymm := by
-      rintro ⟨z1,p1,n1⟩ ⟨x2,p2,n2⟩ ab bc
-      simp [LE.le, Sign.incl] at *
-      grind
+/-- Inclusion of Sign elements establishes a partial order -/
+@[grind =]
+instance: LE Sign where
+  le x y := Sign.incl x y = true
+/-- Inclusion of Sign elements establishes a partial order -/
+@[grind]
+instance instPartialOrderSign: PartialOrder Sign where
+  le_refl := by simp [LE.le, Sign.incl]
+  le_trans := by
+    intros; simp [LE.le, Sign.incl] at *; grind
+  le_antisymm := by
+    rintro ⟨z1,p1,n1⟩ ⟨x2,p2,n2⟩ ab bc
+    simp [LE.le, Sign.incl] at *
+    grind
 
-  open Classical in
-  /--
-    There is a Galois embedding between the Sign domain and the
-    Integers subset domain.
-
-    To define the abstraction function, one needs to be able to
-    determine whether a positive (resp. negative) integer is in
-    the set or not. This is generally undecidable, so we need to
-    make use of the axiom of choice. This is acceptable, since
-    we don't use the abstraction nor concretization functions in
-    our computations, just to justify the laws of operators.
-  -/
-  noncomputable instance instGESignIntSet: GaloisEmbedding (A := Sign) (C := Set Int) where
-
-    concrete a z := match compare z 0 with
-      | .lt => a.hasNeg
-      | .eq => a.hasZero
-      | .gt => a.hasPos
-
-    abstract X := {
+open Classical in
+/-- Abstraction of a set of integers by `Sign` (which only captures
+its element's signature (<0,=0,>0) information) -/
+@[grind =]
+noncomputable def Sign.abstract(X: Set Int): Sign := {
       hasZero := X 0
       hasPos := ∃ z, z > 0 ∧ X z
       hasNeg := ∃ z, z < 0 ∧ X z
-    }
+}
 
-    connection:= by
-      rintro ⟨z,p,n⟩ X
-      constructor
-      · intros abs_lt x x_X
-        simp at *
-        simp [LE.le, Sign.incl] at abs_lt
-        cases h: compare x 0 <;> simp at h <;> grind
-      · intros conc_lt
-        simp [LE.le, Sign.incl] at ⊢
-        apply and_assoc.mpr
-        have h0 := conc_lt 0; simp at h0
-        apply And.intro
-        · grind
-        apply And.intro
-        ·
-          if h: ∃ x, 0 < x ∧ X x = true then
-            obtain ⟨x, x_lt, Xx⟩ := h
-            specialize conc_lt x Xx; simp only [Int.compare_eq_gt.mpr x_lt] at conc_lt
-            grind [Ordering]
-          else
-            apply Or.inl
-            simpa using h
-        ·
-          if h: ∃ x, x < 0 ∧ X x = true then
-            obtain ⟨x, x_lt, Xx⟩ := h
-            specialize conc_lt x Xx; simp only [Int.compare_eq_lt.mpr x_lt] at conc_lt
-            grind
-          else
-            apply Or.inl
-            simpa using h
+/-- The integer set represented by a particular `Sign` element -/
+@[grind =]
+def Sign.concrete(a: Sign): Set Int := λ z ↦ match compare z 0 with
+| .lt => a.hasNeg
+| .eq => a.hasZero
+| .gt => a.hasPos
 
-    embedding := by
-      rintro ⟨z,p,n⟩
-      simp
+-- /--
+--   There is a Galois embedding between the Sign domain and the
+--   Integers subset domain.
+
+--   To define the abstraction function, one needs to be able to
+--   determine whether a positive (resp. negative) integer is in
+--   the set or not. This is generally undecidable, so we need to
+--   make use of the axiom of choice. This is acceptable, since
+--   we don't use the abstraction nor concretization functions in
+--   our computations, just to justify the laws of operators.
+-- -/
+-- @[grind =]
+-- noncomputable instance instGESignIntSet: GaloisEmbedding (A := Sign) (C := Set Int) where
+--   concrete := Sign.concrete
+--   abstract := Sign.abstract
+
+--   connection:= by
+--     rintro ⟨p,z,n⟩ X
+--     constructor
+--     · intros abs_lt x x_X
+--       simp at *
+--       simp [LE.le, Sign.incl] at abs_lt
+--       cases h: compare x 0 <;> simp at h <;> grind
+--     · intros conc_lt
+--       simp [LE.le, Sign.incl] at ⊢
+--       have h₁: ∀ a b, a = false ∨ b = true ↔ (a = true → b = true) := by
+--         grind
+--       simp only [h₁]
+--       apply and_assoc.mpr
+--       have h0 := conc_lt 0; simp at h0
+--       apply And.intro
+--       · grind
+--       apply And.intro <;> grind [LE.le]
+
+--   embedding := by
+--     rintro ⟨p,z,n⟩
+--     simp only [Sign.abstract, gt_iff_lt, Sign.concrete, Std.compare_self, Sign.mk.injEq, true_and]
+--     apply And.intro
+--     · cases p_def: p
+--       · simp only [decide_eq_false_iff_not, not_exists, not_and, Bool.not_eq_true]; grind
+--       · simp; exists 1
+--     · cases n_def: n
+--       · simp; grind
+--       · simp; exists -1
+
+def inst: GaloisConnection Sign.abstract Sign.concrete := by
+    rintro X ⟨p,z,n⟩
+    constructor
+    · intros abs_lt x x_X
+      simp at *
+      simp [LE.le, Sign.incl] at abs_lt
+      cases h: compare x 0 <;> simp at h
+      · simp [Sign.abstract, Sign.concrete] at *
+        set_option trace.grind.ematch.instance true in
+        grind
+        sorry
+      · sorry
+      · sorry
+    · intros conc_lt
+      have h₁: ∀ a b, a = false ∨ b = true ↔ (a = true → b = true) := by
+        grind
+      simp only [LE.le, Sign.incl, Bool.not_and, Bool.not_not, Bool.and_eq_true, Bool.or_eq_true,
+        Bool.not_eq_eq_eq_not, Bool.not_true, h₁, and_assoc] at ⊢
+      clear h₁
+      have h0 := conc_lt 0; simp at h0
       apply And.intro
-      · cases p_def: p
-        · simp; grind
-        · simp; exists 1
-      · cases n_def: n
-        · simp; grind
-        · simp; exists -1
+      · grind
+      apply And.intro
+      · intros h
+        simp [Sign.abstract] at h
+        obtain ⟨z, z_pos, Xz⟩ := h
+        simp only [LE.le] at conc_lt
+        grind
+      · intros h
+        simp [Sign.abstract] at h
+        obtain ⟨z, z_pos, Xz⟩ := h
+        simp only [LE.le] at conc_lt
+        grind
+
+noncomputable instance: GaloisConnection (A := Sign) (C := Set Int) where
+
+
+instance: GaloisInsertion Sign.concrete Sign.abstract where
 
 end GaloisEmbedding
 
@@ -328,8 +407,6 @@ instance: NarrowLawful Sign where
     grind [Sign.meet]
 
 instance: ValueDomain Sign where
-  eq_dec := inferInstance
-
   /- TODO: What laws must `nil` obey? -/
   nil := .All
 
@@ -337,14 +414,7 @@ instance: ValueDomain Sign where
     (x', y') st x' = {e  ∈ x : ∃e' ∈ y, e op e'}
                 y' = {e' ∈ y : ∃e  ∈ x, e op e'}
   -/
-  /- TODO: Improve -/
-  compare op x y := match op with
-  | .eq  => (x.meet y, x.meet y)
-  | .neq => (x.join (x.meet y).opposite, y.join (x.meet y).opposite)
-  | .le  => (x, y)
-  | .lt  => (x, y)
-  | .ge  => (x, y)
-  | .gt  => (x, y)
+  compare op x y := Sign.compare' op x y
 
   rand := fun
   | .some l, .some r =>
@@ -405,4 +475,43 @@ theorem add_correct
   -- but if -1 ∈ γ ([<0] + [<0]) then it doesn't mean -1 ∈ (γ[<0] + γ[<0])).
   -- In particular, -1 ∈ γ(a) + γ(b) → ∃ c ≥ 0 ∈ γ(a) ∪ γ(b), since -1 cannot
   -- be obtained from the sum of two negative integers.
+
+attribute [local grind] concrete
+notation "γ" x => (concrete x: Set Int)
+-- macro "concrete" x : term  => `((concrete $x: Set Int))
+
+theorem restrictLT_correct (x y: Sign)
+: ∀ e, (γ (x.restrictLT y)) e = true →
+  (γ x) e = true ∧
+  ∃ e',
+    (γ y) e' = true ∧
+    e < e'
+:= by
+  fun_cases (x.restrictLT y)
+  · intros e h; refine ⟨h, ?_⟩
+    exists (if e <= 0 then 1 else e+1)
+    grind
+  · intros e h; constructor
+    · grind
+    · exists 0; grind
+  · intros e h; constructor <;> grind
+
+theorem restrictLE_correct (x y: Sign)
+: let concrete := instGESignIntSet.concrete
+  ∀ e, concrete (x.restrictLE y) e = true →
+  concrete x e = true ∧
+  ∃ e',
+    concrete y e' = true ∧
+    e ≤ e'
+:= by
+  fun_cases (x.restrictLE y) <;>
+  simp only [concrete]
+  · intros e h; refine ⟨h, ?_⟩
+    exists (if e <= 0 then 1 else e+1)
+    grind
+  · intros e h; constructor
+    · grind
+    · exists 0; grind
+  all_goals intros e h; constructor <;> grind
+
 end Correctness
