@@ -91,9 +91,6 @@ def elabResult (nod : Normalize.Node) : ResultM nod Unit := do
       addNewPreNodeOutNext (.assign (input_var k) (.rand none none))
     for g in nod.guards do
       addNewPreNodeOutNext (.guard g.to_cfg_expr)
-    for h : i in [0:nod.m] do
-      let k := Fin.mk' i
-      addNewPreNodeOutNext (.assign (bound_var k) .nil)
     let there_id ← getNextId
     for h : i in [0:nod.m] do
       let k := Fin.mk' i
