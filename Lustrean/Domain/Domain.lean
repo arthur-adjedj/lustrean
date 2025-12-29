@@ -1,3 +1,5 @@
+import Mathlib.Order.BoundedOrder.Basic
+import Mathlib.Order.Lattice
 import Lustrean.Imp
 
 namespace Lustrean
@@ -18,6 +20,23 @@ class BoundedLattice (α : Type) where
   meet_bot : ∀ (x : α), meet x bot = bot
   non_trivial : top ≠ bot := by decide
 export BoundedLattice (bot top join meet)
+
+instance {α: Type}[Lattice α][ι : BoundedOrder α] : BoundedLattice α where
+  bot := ⊥
+  top := ⊤
+  join x y := x ⊔ y
+  meet x y := x ⊓ y
+  join_commutative := by grind
+  join_associative := by grind
+  join_absorption x y := by simp
+  join_bot := by simp
+  join_top := by simp
+  meet_commutative := by grind
+  meet_associative := by grind
+  meet_absorption x y := by simp
+  meet_bot := by simp
+  meet_top := by simp
+  non_trivial := by sorry
 
 notation " ⊤ " => top
 notation " ⊥ " => bot
@@ -49,7 +68,7 @@ theorem trans : ∀ {x y z : α}, x ⊑ y → y ⊑ z → x ⊑ z := by
     rw [Hy]
   rw [meet_associative]
 
-instance {α : Type} [ι : BoundedLattice α] : Trans (@IsSubset α ι) (@IsSubset α ι) (@IsSubset α ι) where
+instance : Trans (@IsSubset α ι) (@IsSubset α ι) (@IsSubset α ι) where
   trans := trans
 
 theorem bot_min : ∀ {x : α}, ⊥ ⊑ x := by
@@ -65,8 +84,16 @@ theorem antisymm : ∀ {x y : α}, x ⊑ y → y ⊑ x → x = y := by
   symm
   assumption
 
-instance {α : Type} [ι : BoundedLattice α] : Std.Antisymm (@IsSubset α ι) where
+instance : Std.Antisymm (@IsSubset α ι) where
   antisymm := @antisymm _ _
+
+local instance instBoundedLatticeLE : LE α where
+  le := IsSubset
+
+instance : Std.IsPreorder α where
+  le_refl a := by
+    simp [LE.le, IsSubset]
+
 
 @[simp]
 theorem min_bot_is_bot : ∀ {x : α}, x ⊑ ⊥ → x = bot := by
@@ -223,5 +250,17 @@ where
 export Domain (guard assign)
 
 instance (α : Type) [BEq α][ι: Domain α] : DecidablePred (· = (bot: α)) := ι.dec_bot
+
+
+section conversions
+namespace BoundedLattice
+instance {α: Type}[BoundedLattice α]: LE α where
+  le := BoundedLattice.IsSubset
+
+instance {α: Type}[BoundedLattice α]: OrderBot α where
+  bot := bot
+  bot_le :=
+end BoundedLattice
+end conversions
 
 end Lustrean
