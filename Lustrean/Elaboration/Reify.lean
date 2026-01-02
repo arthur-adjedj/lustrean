@@ -396,9 +396,9 @@ def elabNode (s : TSyntax `lustre_node) : CoreM (&Node) :=
 
     let guards ← guards.getD #[] |>.mapM elabBoolExpr
 
-    /- we reject programs with multiple redefinitions of the same variable -/
-
     let asserts ← asserts.getD #[] |>.mapM elabBoolExpr
+
+    /- we reject programs with multiple redefinitions of the same variable -/
     return ⟨{name, input_vars, bound_vars, output_vars, guards, asserts}, s⟩
   | _ =>
     throwUnsupportedSyntax
