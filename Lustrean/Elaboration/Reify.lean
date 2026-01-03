@@ -82,7 +82,7 @@ end WithRef
 inductive LowerBound where
   | nat (n : Nat)
   | minf
-  deriving Repr, Inhabited, BEq
+  deriving Repr, Inhabited
 
 namespace LowerBound
 protected def toString : LowerBound → String
@@ -99,7 +99,7 @@ end LowerBound
 inductive UpperBound where
   | nat (n : Nat)
   | pinf
-  deriving Repr, Inhabited, BEq
+  deriving Repr, Inhabited
 
 namespace UpperBound
 protected def toString : UpperBound → String
@@ -116,7 +116,7 @@ end UpperBound
 inductive MonOp where
   | neg
   | «pre»
-  deriving Repr, Inhabited, BEq
+  deriving Repr, Inhabited
 
 namespace MonOp
 protected def toString : MonOp → String
@@ -131,7 +131,7 @@ inductive CmpOp where
   | eq
   | leq
   | lt
-  deriving Repr, Inhabited, BEq
+  deriving Repr, Inhabited
 
 namespace CmpOp
 protected def toString : CmpOp → String
@@ -146,7 +146,7 @@ end CmpOp
 inductive BoolBinOp where
   | and
   | or
-  deriving Repr, Inhabited, BEq
+  deriving Repr, Inhabited
 
 namespace BoolBinOp
 protected def toString : BoolBinOp → String
@@ -165,7 +165,7 @@ inductive BinOp where
   | mul
   | fby
   | arr
-  deriving Repr, Inhabited, BEq
+  deriving Repr, Inhabited
 
 namespace BinOp
 protected def toString : BinOp → String
@@ -190,7 +190,7 @@ inductive Expr where
   | bin_op (op : BinOp) (left right : &Expr)
   | node (name : &Name) (args : Array (&Expr))
   | ite (cond : &BoolExpr) (tb : &Expr) (eb : &Expr)
-  deriving Repr, Inhabited, BEq
+  deriving Repr, Inhabited
 
 inductive BoolExpr where
   | cmp_op (op : CmpOp) (left right : &Expr)
@@ -221,7 +221,6 @@ instance : ToString BoolExpr where
 
 deriving instance BEq for Name
 
-
 structure Variable where
   name : &Name
   deriving Repr, Inhabited, BEq
@@ -229,7 +228,7 @@ structure Variable where
 structure BoundVars where
   names : Array (&Name)
   value : &Expr
-  deriving Repr, Inhabited, BEq
+  deriving Repr, Inhabited
 
 structure Node where
   name : &Name
@@ -386,6 +385,9 @@ def elabNode (s : TSyntax `lustre_node) : CoreM (&Node) :=
       }
       | ref => withRef ref throwUnsupportedSyntax
 
+    /- we reject programs with multiple redefinitions of the same variable -/
+    if !(bound_vars.map (BoundVars.names)).allDiff then throwIllFormedSyntax
+
     let output_vars : Array &Name := output_vars.map (·.getElems.map (fun var => ⟨var.getId, var⟩)) |>.getD default
 
     /- we reject programs with output having repetitions -/
@@ -395,10 +397,7 @@ def elabNode (s : TSyntax `lustre_node) : CoreM (&Node) :=
     if !(intersect (input_vars.map (Variable.name) ) output_vars).isEmpty then throwIllFormedSyntax
 
     let guards ← guards.getD #[] |>.mapM elabBoolExpr
-
     let asserts ← asserts.getD #[] |>.mapM elabBoolExpr
-
-    /- we reject programs with multiple redefinitions of the same variable -/
     return ⟨{name, input_vars, bound_vars, output_vars, guards, asserts}, s⟩
   | _ =>
     throwUnsupportedSyntax
