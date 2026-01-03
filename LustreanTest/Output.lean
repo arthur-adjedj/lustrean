@@ -83,11 +83,13 @@ lustre
       o ≥ 0
       o ≤ 3
 
+/-- error: ill-formed syntax -/
+#guard_msgs in
+lustre
+node f() = o, o where
+    o = o
+
 /--
-error: variable o could be nil
----
-error: variable o could be nil
----
 error: assert failed under #[[1; +∞], [5; +∞], [0; 3], [0; 3]]
 ---
 error: assert failed under #[[1; +∞], [5; 5], [3; 3], [5; 5], [3; 3], [6; 6], [5; 5], [3; 3], [5; 5], [3; 3], [6; 6]]
@@ -96,10 +98,7 @@ error: assert failed under #[[1; +∞], [5; 5], [3; 3], [5; 5], [3; 3], [6; 6], 
 -/
 #guard_msgs in
 lustre
-  node f() = o, o where
-    o = o
-
-  node u(x) = o where
+node u(x) = o where
     o = 0 fby x
 
   -- shadowing
