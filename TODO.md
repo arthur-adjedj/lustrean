@@ -4,10 +4,10 @@
 
 ## Léo
 
-- [ ] rejeter les programmes mal formés (eg `node f(x,x) = x,x where x = 1; x = 2`)
+- [x] rejeter les programmes mal formés (eg `node f(x,x) = x,x where x = 1; x = 2`)
   - [x] pas d'overlap entre entrée/sortie
   - [x] pas de doublon dans l'entrée + la sortie
-  - [ ] pas de double binding dans le corps
+  - [x] pas de double binding dans le corps
 - [ ] étendre l'AST, e.g pour rajouter `pre`, `->`, des expressions booléennes
 - [ ] rajouter du typage (bool, int, string; `Syntax -> Expr` becomes `Syntax -> Σ(T:Typ): Expr T`), y compris potentiellement du typage de clock (en simplifiant les comparaisons au début)
 - [ ] potentiellement ne pas checker les clocks au typage mais plus tard avec les domaines, ça permettrait d'accepter + de programmes potentiellement
