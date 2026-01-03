@@ -86,8 +86,16 @@ lustre
 /-- error: ill-formed syntax -/
 #guard_msgs in
 lustre
-node f() = o, o where
+  node f() = o, o where
     o = o
+
+  node g(x,x) where
+
+  node h(x) = x where
+
+  node i(x,y) = o where
+    o = x
+    o = y
 
 /--
 error: assert failed under #[[1; +∞], [5; +∞], [0; 3], [0; 3]]
