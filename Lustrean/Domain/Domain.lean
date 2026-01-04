@@ -18,6 +18,9 @@ class BoundedLattice (α : Type) where
   meet_absorption : ∀ (x y : α), meet x (join x y) = x
   meet_top : ∀ (x : α), meet x top = x
   meet_bot : ∀ (x : α), meet x bot = bot
+  -- With how we have defined `BoundedLattice`, we don't require that
+  -- join gives the lowest upper bound. Same with meet giving the greatest
+  -- lower bound. Do we want to include these restrictions?
 export BoundedLattice (bot top join meet)
 
 section instances
@@ -212,6 +215,26 @@ theorem trivial_of_top_eq_bot
    _ = meet x ⊤ := by simp [meet_top]
    _ = meet x ⊥ := by rw [h]
    _ = ⊥        := by simp [meet_bot]
+
+instance{α: Type}[LE α][Std.IsPreorder α]: Preorder α where
+  le_refl := Std.IsPreorder.le_refl
+  le_trans := Std.IsPreorder.le_trans
+
+instance{α: Type}[LE α][Std.IsPartialOrder α]: PartialOrder α where
+  le_antisymm := Std.IsPartialOrder.le_antisymm
+
+instance: Std.IsPartialOrder α where
+  le_antisymm := by simp [LE.le]; apply antisymm
+
+instance: SemilatticeSup α where
+  sup := Max.max
+  le_sup_left := by simp [LE.le, IsSubset]
+  le_sup_right x y := by simp [LE.le, IsSubset, join_commutative x, meet_absorption]
+  sup_le x y z := by
+    intros h₁ h₂
+    simp [LE.le, IsSubset] at *
+
+instance: Lattice α where
 
 end BoundedLattice
 
