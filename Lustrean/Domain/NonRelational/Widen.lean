@@ -4,9 +4,9 @@ namespace Lustrean.NonRelational
 variable {α : Type} {n : Nat} [BEq α]
 variable [ι : ValueDomain α]
 
-theorem non_rel_subset : ∀ (x y : {env : Vector α n // ∀ i, env.get i ≠ ⊥}),
+theorem non_rel_subset : ∀ (x y : {env : Vector α (n+1) // ∀ i, env.get i ≠ ⊥}),
   NonRelational.non_rel x ⊑ NonRelational.non_rel y
-  ↔ ∀ i : Fin n, x.val.get i ⊑ y.val.get i
+  ↔ ∀ i : Fin (n+1), x.val.get i ⊑ y.val.get i
 := by
   intros x y
   constructor <;> intros H

@@ -779,7 +779,7 @@ instance BoundedLatticeInterval : BoundedLattice (Interval constants) where
   meet_absorption := meet_absorption
   meet_bot := meet_bot
   meet_top := meet_top
-  non_trivial := non_trivial
+  -- non_trivial := non_trivial
 
 def splitAtZero : Interval constants × Interval constants :=
   (

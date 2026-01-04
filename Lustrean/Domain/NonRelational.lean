@@ -13,6 +13,8 @@ namespace Lustrean
 namespace NonRelational
 variable {α : Type} {n : Nat} [BEq α]
 variable [ι : ValueDomain α]
+
+section ops
 variable (x : NonRelational α n)
 
 def get (i : Fin n) : α := match x with
@@ -73,20 +75,22 @@ def assign (i : Fin n) (e : IExpr n) : NonRelational α n :=
     backwardEval x e₁ r₁ ⊓ backwardEval x e₂ r₂
   | .or b₁ b₂ => guard b₁ ⊔ guard b₂
   | .and b₁ b₂ => guard b₁ ⊓ guard b₂
+end ops
 
-  instance : Domain (NonRelational α n) where
-    nb_var := n
-    dec_bot x := match h: x with
-    | .non_rel _ => isFalse (by simp)
-    | .bot       => isTrue  (by simp)
+instance : Domain (NonRelational α n) where
+  nb_var := n
+  dec_bot x := match h: x with
+  | .non_rel _ => isFalse (by simp)
+  | .bot       => isTrue  (by simp)
 
-    assign := assign
-    guard := guard
-    -- TODO: pourquoi ça n'infère pas ??
-    covering_left := WidenLawful.covering_left
-    covering_right := WidenLawful.covering_right
+  assign := assign
+  guard := guard
+  -- TODO: pourquoi ça n'infère pas ??
+  covering_left := WidenLawful.covering_left
+  covering_right := WidenLawful.covering_right
 
-    bounding_low := NarrowLawful.bounding_low
-    bounding_high := NarrowLawful.bounding_high
+  bounding_low := NarrowLawful.bounding_low
+  bounding_high := NarrowLawful.bounding_high
+
 end NonRelational
 end Lustrean

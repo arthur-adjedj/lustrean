@@ -11,9 +11,7 @@ theorem join_commutative : join x y = join y x := by
   simp [BoundedLattice.join_commutative]
 
 theorem join_associative : join (join x y) z = join x (join y z) := by
-  cases x <;> cases y <;> cases z <;> dsimp [join]
-  rename_i x y z
-  simp
+  cases x <;> cases y <;> cases z <;> simp [join]
 
 theorem join_absorption : join x (meet x y) = x := by
   cases x <;> cases y <;> simp only [
@@ -32,7 +30,18 @@ theorem join_bot : x.join bot = x := by
   cases x <;> simp [join]
 
 theorem join_top : x.join top = top := by
-  cases x <;> simp [join, top]
-  ext
-  simp
+  cases x
+  case non_rel n env =>
+    obtain ⟨env, prop⟩ := env
+    -- have: Decidable (⊤ = ⊥):= ι.dec_bot ⊤
+    if h: (⊤: α) = ⊥ then
+      exfalso
+      apply prop 0
+      apply BoundedLattice.trivial_of_top_eq_bot h
+    else
+      simp [h, join, top]
+      grind
+  case bot =>
+    simp [join]
+
 end Lustrean.NonRelational

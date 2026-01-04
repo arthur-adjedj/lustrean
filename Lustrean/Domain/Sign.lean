@@ -376,7 +376,7 @@ instance: BoundedLattice Sign where
   join_top := by simp [Sign.All, Sign.None, Sign.opposite,  Sign.join]
   meet_bot := by simp [Sign.None, Sign.meet]
   meet_top := by simp [Sign.All, Sign.None, Sign.opposite, Sign.meet]
-  non_trivial := by decide
+  -- non_trivial := by decide
   join_commutative := Sign.join_commutative
   join_associative := Sign.join_associative
   meet_commutative := Sign.meet_commutative

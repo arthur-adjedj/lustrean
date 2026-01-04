@@ -92,7 +92,6 @@ instance : BoundedLattice (Undefined α) where
   meet_absorption := meet_absorption
   meet_top := meet_top
   meet_bot := meet_bot
-  non_trivial := non_trivial
 
 def widen (n : Nat) : Undefined α :=
   .mk (ι.widen x.val y.val n) (x.may_be_nil || y.may_be_nil)

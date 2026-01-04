@@ -5,9 +5,6 @@ namespace Lustrean.NonRelational
 variable {α : Type} {n : Nat} [BEq α]
 variable [ι : ValueDomain α]
 
-theorem non_trivial : (.top : NonRelational α n) ≠ .bot := by
-  simp [top]
-
 instance : BoundedLattice (NonRelational α n) where
   bot := bot
   top := top
@@ -23,5 +20,4 @@ instance : BoundedLattice (NonRelational α n) where
   meet_absorption := meet_absorption
   meet_top := meet_top
   meet_bot := meet_bot
-  non_trivial := non_trivial
 end Lustrean.NonRelational

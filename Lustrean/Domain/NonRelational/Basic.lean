@@ -7,15 +7,14 @@ namespace Lustrean
   Given an abstract domain `α` over values `C`, constructs a
   non-relational abstract domain of `Set C`.
 -/
-inductive NonRelational (α : Type) [BEq α][ValueDomain α] (n : Nat) where
-| non_rel (env : { env : Vector α n // ∀ i : Fin n, env.get i ≠ ⊥ }) : NonRelational α n
-| bot : NonRelational α n
+inductive NonRelational (α : Type) [BEq α][ValueDomain α]: Nat → Type where
+| non_rel {n: Nat}(env : { env : Vector α (n+1) // ∀ i : Fin (n+1), env.get i ≠ ⊥ }) : NonRelational α (n+1)
+| bot {n: Nat}: NonRelational α n
 
 namespace NonRelational
 
 variable {α : Type} {n : Nat} [BEq α]
 variable [ι : ValueDomain α]
-variable (x y : NonRelational α n)
 
 instance : BEq (NonRelational α n) where
   beq
@@ -32,18 +31,21 @@ instance : ToString (NonRelational α n) where
   toString := NonRelational.toString
 
 def coalesce (env : Vector α n) : NonRelational α n :=
-  have := fun i : Fin n => ι.dec_bot (env.get i)
-  if H : ∀ i, env.get i ≠ ⊥
-  then
-    .non_rel <| .mk env H
-  else
-    .bot
+  match n with
+  | 0 => .bot
+  | m+1 =>
+    if H: ∀ (i: Fin (m+1)), env.get i ≠ ⊥ then
+      .non_rel ⟨env, H⟩
+    else
+      .bot
 
-def mapNil (f : Vector α n → Vector α n) : NonRelational α n :=
+def mapNil (x: NonRelational α n)(f : Vector α n → Vector α n) : NonRelational α n :=
   match x with
   | .non_rel x => coalesce <| f x.val
   | .bot => .bot
 
+section ops
+variable (x y : NonRelational α n)
 def map2Nil (f : Vector α n → Vector α n → Vector α n) : NonRelational α n :=
   match x, y with
   | .non_rel x, .non_rel y => coalesce (f x.val y.val)
@@ -87,15 +89,11 @@ theorem join_neq_bot : ∀ (x y : { env : Fin n → α // ∀ i, env i ≠ ⊥})
   intros
   apply H
 
-def top : NonRelational α n := .non_rel <| .mk (Vector.replicate _ ⊤) fun _ => by
-  simp
-  apply ι.non_trivial
-
 def join : NonRelational α n := match x, y with
   | .non_rel ⟨x, H⟩, .non_rel ⟨y, _⟩ =>
     .non_rel <| .mk (Vector.ofFn fun i => x.get i ⊔ y.get i) <| (by
       intros i
-      simp [BoundedLattice.join_eq_bot_iff_bot]
+      simp only [Vector.get_of_fn_fin, ne_eq, BoundedLattice.join_eq_bot_iff_bot, not_and]
       intro
       exfalso
       apply H
@@ -103,5 +101,17 @@ def join : NonRelational α n := match x, y with
   | .bot, z | z, .bot => z
 
 def meet : NonRelational α n := map2Nil x y fun x y => Vector.ofFn fun i => x.get i ⊓ y.get i
+end ops
+
+def top : NonRelational α n :=
+  if h: (⊤: α) = (⊥: α) then
+    .bot
+  else
+    match n with
+    | 0 => .bot
+    | m+1 =>
+      .non_rel ⟨Vector.replicate _ ⊤, by simp only [Vector.get_mk_vector_fin, ne_eq, h,
+        not_false_eq_true, implies_true]⟩
+
 end NonRelational
 end Lustrean

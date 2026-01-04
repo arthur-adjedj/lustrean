@@ -18,7 +18,6 @@ class BoundedLattice (α : Type) where
   meet_absorption : ∀ (x y : α), meet x (join x y) = x
   meet_top : ∀ (x : α), meet x top = x
   meet_bot : ∀ (x : α), meet x bot = bot
-  non_trivial : top ≠ bot := by decide
 export BoundedLattice (bot top join meet)
 
 instance {α: Type}[Lattice α][ι : BoundedOrder α] : BoundedLattice α where
@@ -192,6 +191,14 @@ theorem meet_min_right : ∀ {x y : α}, x ⊓ y ⊑ y := by
   intros x y
   rw [meet_commutative]
   apply meet_min_left
+
+theorem trivial_of_top_eq_bot
+  (h: (⊤: α) = ⊥)(x: α)
+: x = ⊥
+:= calc x
+   _ = meet x ⊤ := by rw [meet_top]
+   _ = meet x ⊥ := by rw [h]
+   _ = ⊥        := by rw [meet_bot]
 
 end BoundedLattice
 
