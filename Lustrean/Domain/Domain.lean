@@ -20,27 +20,31 @@ class BoundedLattice (α : Type) where
   meet_bot : ∀ (x : α), meet x bot = bot
 export BoundedLattice (bot top join meet)
 
-instance {α: Type}[Lattice α][ι : BoundedOrder α] : BoundedLattice α where
+section instances
+instance {α: Type}[Lattice α][BoundedOrder α] : BoundedLattice α where
   bot := ⊥
   top := ⊤
   join x y := x ⊔ y
   meet x y := x ⊓ y
   join_commutative := by grind
   join_associative := by grind
-  join_absorption x y := by simp
-  join_bot := by simp
+  join_absorption x y := by grind only [inf_le_left, sup_of_le_left]
+  join_bot := by grind only [bot_le, sup_of_le_left]
   join_top := by simp
   meet_commutative := by grind
   meet_associative := by grind
   meet_absorption x y := by simp
   meet_bot := by simp
   meet_top := by simp
-  non_trivial := by sorry
 
-notation " ⊤ " => top
-notation " ⊥ " => bot
-infixr:60 " ⊔ " => join
-infixr:70 " ⊓ " => meet
+instance{α: Type}[BoundedLattice α]: Bot α where bot := bot
+instance{α: Type}[BoundedLattice α]: Top α where top := top
+instance{α: Type}[BoundedLattice α]: Max α where max := join
+instance{α: Type}[BoundedLattice α]: Min α where min := meet
+end instances
+
+attribute [local simp] Bot.bot Top.top Max.max Min.min
+
 
 namespace BoundedLattice
 variable {α : Type} [ι : BoundedLattice α]
@@ -71,9 +75,7 @@ instance : Trans (@IsSubset α ι) (@IsSubset α ι) (@IsSubset α ι) where
   trans := trans
 
 theorem bot_min : ∀ {x : α}, ⊥ ⊑ x := by
-  intros x
-  unfold IsSubset
-  simp [meet_commutative]
+  simp [IsSubset, meet_commutative, Bot.bot]
 
 theorem antisymm : ∀ {x y : α}, x ⊑ y → y ⊑ x → x = y := by
   intros x y H H'
@@ -88,11 +90,6 @@ instance : Std.Antisymm (@IsSubset α ι) where
 
 local instance instBoundedLatticeLE : LE α where
   le := IsSubset
-
-instance : Std.IsPreorder α where
-  le_refl a := by
-    simp [LE.le, IsSubset]
-
 
 @[simp]
 theorem min_bot_is_bot : ∀ {x : α}, x ⊑ ⊥ → x = bot := by
@@ -109,6 +106,7 @@ theorem min_join_left : ∀ {x y : α}, x ⊑ x ⊔ y := by
 
 theorem min_join_right : ∀ {x y : α}, y ⊑ x ⊔ y := by
   intros
+  simp
   rw [join_commutative]
   apply min_join_left
 
@@ -121,13 +119,14 @@ theorem join_eq_bot_iff_bot : ∀ {x y : α}, x ⊔ y = ⊥ ↔ x = ⊥ ∧ y = 
       have : a = a ⊓ (a ⊔ b) := by simp
       rw [this, Ha]
       simp
-    constructor <;> apply this <;> first | assumption | rw [join_commutative] <;> assumption
+    constructor <;> apply this <;> first | assumption | (simp;rw [join_commutative]) <;> assumption
   · intro ⟨ Hx, Hy ⟩
     simp [Hx, Hy]
 
 theorem meet_not_bot_left : ∀ {x y : α}, x ⊓ y ≠ ⊥ → x ≠ ⊥ := by
   intros x y H Hc
   apply H
+  simp
   rw [Hc, meet_commutative]
   simp
 
@@ -173,7 +172,9 @@ theorem meet_idempotent : ∀ x : α, x ⊓ x = x := by
 
 theorem refl : ∀ {x : α}, x ⊑ x := by
   intros x
-  simp [IsSubset]
+  have h := meet_idempotent x
+  simp at h
+  simp [IsSubset, h]
 
 @[simp]
 theorem meet_min_left : ∀ {x y : α}, x ⊓ y ⊑ x := by
@@ -183,12 +184,24 @@ theorem meet_min_left : ∀ {x y : α}, x ⊓ y ⊑ x := by
     rhs
     arg 2
     rw [meet_commutative]
-  rw [←meet_associative]
-  simp
+  have := meet_idempotent x
+  simp at this
+  rw [←meet_associative, this]
+
+instance : Std.IsPreorder α where
+  le_refl x := by
+    have := meet_idempotent x
+    simp at this
+    simp [LE.le, IsSubset, this]
+    -- TODO: We need to add that a ⊓ a = a is a rule it must follow.
+  le_trans := by
+    intros x y z x_y y_z
+    apply Lustrean.BoundedLattice.trans x_y y_z
 
 @[simp]
 theorem meet_min_right : ∀ {x y : α}, x ⊓ y ⊑ y := by
   intros x y
+  simp
   rw [meet_commutative]
   apply meet_min_left
 
@@ -196,9 +209,9 @@ theorem trivial_of_top_eq_bot
   (h: (⊤: α) = ⊥)(x: α)
 : x = ⊥
 := calc x
-   _ = meet x ⊤ := by rw [meet_top]
+   _ = meet x ⊤ := by simp [meet_top]
    _ = meet x ⊥ := by rw [h]
-   _ = ⊥        := by rw [meet_bot]
+   _ = ⊥        := by simp [meet_bot]
 
 end BoundedLattice
 
@@ -257,17 +270,5 @@ where
 export Domain (guard assign)
 
 instance (α : Type) [BEq α][ι: Domain α] : DecidablePred (· = (bot: α)) := ι.dec_bot
-
-
-section conversions
-namespace BoundedLattice
-instance {α: Type}[BoundedLattice α]: LE α where
-  le := BoundedLattice.IsSubset
-
-instance {α: Type}[BoundedLattice α]: OrderBot α where
-  bot := bot
-  bot_le :=
-end BoundedLattice
-end conversions
 
 end Lustrean
