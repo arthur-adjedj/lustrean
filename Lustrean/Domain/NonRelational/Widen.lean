@@ -4,33 +4,40 @@ namespace Lustrean.NonRelational
 variable {α : Type} {n : Nat} [BEq α]
 variable [ι : ValueDomain α]
 
-theorem non_rel_subset : ∀ (x y : {env : Vector α (n+1) // ∀ i, env.get i ≠ ⊥}),
+-- set_option maxHeartbeats 1222222 in
+theorem non_rel_subset : ∀ (x y : {env : Vector α (n+1) // ∀ i, ¬ env[i] = ⊥}),
   NonRelational.non_rel x ⊑ NonRelational.non_rel y
-  ↔ ∀ i : Fin (n+1), x.val.get i ⊑ y.val.get i
+  ↔ ∀ i : Fin (n+1), x.val[i] ⊑ y.val[i]
 := by
   intros x y
-  constructor <;> intros H
-  · simp [BoundedLattice.IsSubset, meet] at H
-    unfold map2Nil at H
-    unfold coalesce at H
+  obtain ⟨x, x_prop⟩ := x
+  obtain ⟨y, y_prop⟩ := y
+  apply Iff.intro <;> intros H
+  · unfold BoundedLattice.IsSubset at H
+    simp only [Min.min, Lustrean.meet] at H
+    simp only [NonRelational.meet, map2Nil, coalesce] at H
     simp at H
     split at H <;> rename_i h'
     · simp at H
+      intros i
+      simp [BoundedLattice.IsSubset]
       rw [H]
       simp
     · cases H
-  · simp [BoundedLattice.IsSubset, meet]
-    unfold map2Nil
-    simp [coalesce]
-    simp [BoundedLattice.IsSubset] at H
+  · simp only [BoundedLattice.IsSubset]
+    simp only [Min.min, Lustrean.meet]
+    simp only [NonRelational.meet]
+    simp [map2Nil, coalesce]
+    simp [BoundedLattice.IsSubset, -left_eq_inf] at H
     rw [dif_pos]
-    case hc => grind
-    cases x
-    rename_i x Hx
-    simp at *
+    case hc =>
+      intros i
+      rw [←H i]
+      apply x_prop
+      -- TODO: grind fails here
+    simp only [non_rel.injEq, Subtype.mk.injEq]
     ext i h
-    simp
-    apply H
+    simp only [Vector.getElem_ofFn, ←H]
 
 protected def widen : NonRelational α n → NonRelational α n → Nat → NonRelational α n
   | .non_rel x, .non_rel y, n => .non_rel
