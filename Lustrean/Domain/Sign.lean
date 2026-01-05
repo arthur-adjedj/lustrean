@@ -49,7 +49,7 @@ theorem Int.mul_neg_of_div_neg {x y: Int}
   intros h
   rw [←Int.sign_neg_iff, Int.sign_ediv] at h
   split at h
-  · simp only [lt_self_iff_false] at h
+  · simp only [Int.lt_irrefl] at h
   rw [←Int.sign_neg_iff, Int.sign_mul]
   assumption
 
@@ -64,7 +64,7 @@ theorem Int.mul_pos_of_div_pos {x y: Int}
   simp only [gt_iff_lt] at *
   rw [←Int.sign_pos_iff, Int.sign_ediv] at h
   split at h
-  · simp only [lt_self_iff_false] at h
+  · simp only [Int.lt_irrefl] at h
   rw [←Int.sign_pos_iff, Int.sign_mul]
   assumption
 
@@ -245,13 +245,16 @@ def refine (op: Lustrean.CompareOp) (x y: Sign): Sign × Sign := match op with
 
 end Sign
 
+instance: LE Sign := .mk (·.incl · = true)
+instance: Max Sign := .mk Sign.join
+instance: Min Sign := .mk Sign.meet
 instance: Add Sign := .mk Sign.add
 instance: Mul Sign := .mk Sign.mul
 instance: Neg Sign := .mk Sign.neg
 instance: Sub Sign := .mk Sign.sub
 instance: Div Sign := .mk Sign.div
-instance: Widen Sign  where widen a b _ := a.join b
-instance: Narrow Sign where narrow a b _ := a.meet b
+instance: Widen Sign  where widen  a b _ := a ⊔ b
+instance: Narrow Sign where narrow a b _ := a ⊓ b
 
 section GaloisEmbedding
 namespace Sign
@@ -304,8 +307,21 @@ def concrete(a: Sign): Set Int := setOf λ z ↦
   Integers subset domain.
 -/
 def gc: GaloisConnection Sign.abstract Sign.concrete := by
-    rintro X ⟨p,z,n⟩
-    constructor <;> grind (splits := 10) [LE.le]
+    rintro X x
+    constructor
+    · simp only [abstract, concrete, LE.le, incl, Set.Subset, Set.mem_setOf_eq]
+      intros h e h'
+      grind
+    · simp only [abstract, concrete, LE.le, incl, Set.Subset]
+      intros h
+      if ∃ z ∈ X, z < 0 then grind
+      else if ∃ z ∈ X, z > 0 then grind
+      else if e: 0 ∈ X then
+        specialize h e
+        simp at h
+        simp [*]
+      else
+        simp only [decide_false, Bool.false_and, Bool.not_false, gt_iff_lt, Bool.and_self, *]
 
 -- TODO: It'd be nice if there was a simproc that propagated
 -- equalities down `match` statements.
@@ -372,10 +388,10 @@ instance: BoundedLattice Sign where
   top := .All
   join := Sign.join
   meet := Sign.meet
-  join_bot := by simp [Sign.None, Sign.join]
-  join_top := by simp [Sign.All, Sign.None, Sign.opposite,  Sign.join]
-  meet_bot := by simp [Sign.None, Sign.meet]
-  meet_top := by simp [Sign.All, Sign.None, Sign.opposite, Sign.meet]
+  join_bot := by simp [Sign.None, Sign.join, Max.max]
+  join_top := by simp [Sign.All, Sign.None, Sign.opposite,  Sign.join, Max.max]
+  meet_bot := by simp [Sign.None, Sign.meet, Min.min]
+  meet_top := by simp [Sign.All, Sign.None, Sign.opposite, Sign.meet, Min.min]
   -- non_trivial := by decide
   join_commutative := Sign.join_commutative
   join_associative := Sign.join_associative
@@ -388,32 +404,23 @@ instance: WidenLawful Sign where
   /- NOTE: These theorems are inlined since they depend on
      definitions introduced by the `BoundedLattice` typeclass -/
   covering_left := by
-    rintro x y -
     simp [BoundedLattice.IsSubset, Widen.widen]
-    rewrite [Sign.meet_absorption]
-    rfl
 
   /- NOTE: These theorems are inlined since they depend on
      definitions introduced by the `BoundedLattice` typeclass -/
   covering_right := by
-    rintro x y -
     simp [BoundedLattice.IsSubset, Widen.widen]
-    rewrite [Sign.join_commutative, Sign.meet_absorption]
-    rfl
 
 instance: NarrowLawful Sign where
   /- NOTE: These theorems are inlined since they depend on
      definitions introduced by the `BoundedLattice` typeclass -/
   bounding_high := by
-    rintro ⟨z,p,n⟩ ⟨z',p',n'⟩ -
     simp [BoundedLattice.IsSubset, Narrow.narrow]
-    grind [Sign.meet]
 
   /- NOTE: These theorems are inlined since they depend on
      definitions introduced by the `BoundedLattice` typeclass -/
   bounding_low := by
     simp [BoundedLattice.IsSubset, Narrow.narrow]
-    grind [Sign.meet]
 
 instance: ValueDomain Sign where
   nil := .All

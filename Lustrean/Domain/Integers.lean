@@ -25,39 +25,32 @@ instance : BoundedLattice Integers where
   meet := meet
   join_commutative := by
     intro x y
-    cases x <;> cases y <;> dsimp [join]
-    split <;> split
-    · next h₁ => rw [h₁]
-    · next h₁ h₂ => cases h₂ h₁.symm
-    · next h₁ h₂ => cases h₁ h₂.symm
-    · constructor
+    rcases x with _ | _ | ⟨x⟩ <;>
+    rcases y with _ | _ | ⟨y⟩ <;>
+    simp only [join, Max.max]
+    grind
   join_associative := by
     intro x y z
-    cases x <;> cases y <;> cases z <;> dsimp [join]
-    <;> try (next x y =>
-      by_cases h : (x = y) <;> simp [h])
-    next x y z =>
-      by_cases h1 : (x = y) <;>
-      by_cases h2 : (y = z) <;>
-      simp [h1] <;>
-      simp [h2]
-      rw [←h2]
-      simp [h1]
+    rcases x with _ | _ | ⟨x⟩ <;>
+    rcases y with _ | _ | ⟨y⟩ <;>
+    rcases z with _ | _ | ⟨z⟩ <;>
+    dsimp [join, Max.max] <;>
+    grind
   join_absorption := by
     intro x y
-    cases x <;> cases y <;> simp [join, meet] ;
-    next x y =>
-      by_cases h : (x = y) <;>
-      simp [h]
+    rcases x with _ | _ | ⟨x⟩ <;>
+    rcases y with _ | _ | ⟨y⟩ <;>
+    simp only [join, meet, Max.max, Min.min] <;>
+    grind
   join_bot := by
     intro x
-    cases x <;> dsimp [join]
+    cases x <;> dsimp [join, Max.max, Min.min]
   join_top := by
     intro x
-    cases x <;> dsimp [join]
+    cases x <;> dsimp [join, Max.max, Min.min]
   meet_commutative := by
     intro x y
-    cases x <;> cases y <;> dsimp [meet]
+    cases x <;> cases y <;> dsimp [meet, Max.max, Min.min]
     split <;> split
     · next h₁ => rw [h₁]
     · next h₁ h₂ => cases h₂ h₁.symm
@@ -65,7 +58,7 @@ instance : BoundedLattice Integers where
     · constructor
   meet_associative := by
     intro x y z
-    cases x <;> cases y <;> cases z <;> dsimp [meet]
+    cases x <;> cases y <;> cases z <;> dsimp [meet, Max.max, Min.min]
     <;> try (next x y =>
       by_cases h : (x = y) <;> simp [h])
     next x y z =>
@@ -77,16 +70,16 @@ instance : BoundedLattice Integers where
       simp [h1]
   meet_absorption := by
     intro x y
-    cases x <;> cases y <;> simp [meet, join]
+    cases x <;> cases y <;> simp [meet, join, Max.max, Min.min]
     next x y =>
       by_cases h : (x = y) <;>
       simp [h]
   meet_bot := by
     intro x
-    cases x <;> dsimp [meet]
+    cases x <;> dsimp [meet, Max.max, Min.min]
   meet_top := by
     intro x
-    cases x <;> dsimp [meet]
+    cases x <;> dsimp [meet, Max.max, Min.min]
 
 def mapInt (x y : Integers) (f : Int → Int →  Integers) : Integers :=
   match x, y with
@@ -140,14 +133,16 @@ instance : WidenLawful Integers where
   covering_left := by
     intros x y n
     dsimp [BoundedLattice.IsSubset, Widen.widen]
-    cases x <;> cases y <;> simp [meet, join]
-    rename_i x y
+    rcases x with _ | _ | ⟨x⟩ <;>
+    rcases y with _ | _ | ⟨y⟩ <;>
+    simp only [join, Min.min, Meet.meet, meet, reduceIte]
     by_cases h : (x = y) <;> simp [h]
   covering_right := by
     intros x y n
     dsimp [BoundedLattice.IsSubset, Widen.widen]
-    cases x <;> cases y <;> simp [meet, join]
-    rename_i x y
+    rcases x with _ | _ | ⟨x⟩ <;>
+    rcases y with _ | _ | ⟨y⟩ <;>
+    simp only [join, Min.min, Meet.meet, meet, reduceIte]
     by_cases h : (x = y) <;> simp [h]
 
 instance : Narrow Integers where
@@ -157,15 +152,17 @@ instance : NarrowLawful Integers where
   bounding_low := by
     intros x y n
     dsimp [BoundedLattice.IsSubset, Narrow.narrow]
-    cases x <;> cases y <;> simp [meet]
-    rename_i x y
-    by_cases h : (x = y) <;> simp [h]
+    rcases x with _ | _ | ⟨x⟩ <;>
+    rcases y with _ | _ | ⟨y⟩ <;>
+    simp only [Min.min, Meet.meet, meet, reduceIte]
+    grind
   bounding_high := by
     intros x y n
     dsimp [BoundedLattice.IsSubset, Narrow.narrow]
-    cases x <;> cases y <;> simp [meet]
-    rename_i x y
-    by_cases h : (x = y) <;> simp [h]
+    rcases x with _ | _ | ⟨x⟩ <;>
+    rcases y with _ | _ | ⟨y⟩ <;>
+    simp only [Min.min, Meet.meet, meet, reduceIte]
+    grind
 
 def compareInt (op : CompareOp) (a b : Int) : Integers × Integers :=
   let cond := match op with
