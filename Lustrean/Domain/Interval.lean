@@ -62,6 +62,22 @@ instance (n m : IntLow) : Decidable (Le n m) := by
   · apply Decidable.isTrue
     constructor
 
+instance (n m : IntLow) : Decidable (n ≤ m) := by
+  simp only [LE.le]
+  infer_instance
+
+instance: LinearOrder IntLow where
+  le_refl := Le_refl
+  le_trans := @Le_trans
+  le_antisymm := by
+    rintro x y xy yx <;>
+    rcases xy <;> rcases yx <;> simp only [int.injEq]
+    apply Int.le_antisymm <;> simp [*]
+  le_total := by
+    rintro (_ | ⟨x⟩) (_ | ⟨y⟩) <;>
+    dsimp only [LE.le] <;> grind [Le]
+  toDecidableLE := inferInstance
+
 def add (n m : IntLow) : IntLow :=
   match n, m with
   | .minf, _ | _, .minf => .minf
@@ -166,21 +182,18 @@ theorem min_max_absorb : ∀ (l₁ l₂ : IntLow),
 by
   intro l₁ l₂
   cases l₁ <;> cases l₂ <;> simp [min, max]
-  apply Int.min_max_absorb
 
 theorem max_min_absorb : ∀ (l₁ l₂ : IntLow),
   max l₁ (min l₁ l₂) = l₁ :=
 by
   intro l₁ l₂
   cases l₁ <;> cases l₂ <;> simp [min, max]
-  apply Int.max_min_absorb
 
 theorem Le_max_right : ∀ l₁ l₂ : IntLow, l₂ ≤ (max l₁ l₂) :=
 by
   intros l₁ l₂
   cases l₁ <;> cases l₂ <;> simp [max] <;> constructor
-  · apply Int.le_max_right
-  · apply Int.le_refl
+  apply Int.le_max_right
 
 theorem max_eq_left : ∀ {l₁ l₂ : IntLow},
   Le l₂ l₁ → l₁.max l₂ = l₁ :=
@@ -188,9 +201,7 @@ by
   intros l₁ l₂ hle
   cases hle
   · simp
-  · simp [max]
-    apply Int.max_eq_left
-    assumption
+  · simp [max, *]
 
 instance : ToString IntLow where
   toString n := match n with
@@ -263,6 +274,22 @@ instance (n m : IntHigh) : Decidable (Le n m) := by
       cases h
   · apply Decidable.isTrue
     constructor
+
+instance (n m : IntHigh) : Decidable (n ≤ m) := by
+  simp only [LE.le]; infer_instance
+
+instance: LinearOrder IntHigh where
+  le_refl := Le_refl
+  le_trans := @Le_trans
+  le_antisymm := by
+    rintro x y xy yx
+    rcases xy <;> rcases yx <;> simp only [int.injEq]
+    apply Int.le_antisymm <;> simp [*]
+  le_total := by
+    rintro (_ | ⟨x⟩) (_ | ⟨y⟩) <;>
+    dsimp only [LE.le] <;> grind [Le]
+  toDecidableLE := inferInstance
+
 
 def add (n m : IntHigh) : IntHigh :=
   match n, m with
@@ -369,14 +396,12 @@ theorem max_min_absorb : ∀ (h₁ h₂ : IntHigh),
 by
   intro h₁ h₂
   cases h₁ <;> cases h₂ <;> simp [min, max]
-  apply Int.max_min_absorb
 
 theorem min_max_absorb : ∀ (h₁ h₂ : IntHigh),
   min h₁ (max h₁ h₂) = h₁ :=
 by
   intro h₁ h₂
   cases h₁ <;> cases h₂ <;> simp [min, max]
-  apply Int.min_max_absorb
 
 theorem Le_min_right : ∀ (h₁ h₂ : IntHigh), Le (min h₁ h₂) h₂ :=
 by
@@ -390,9 +415,7 @@ by
   intros h₁ h₂ hle
   cases hle
   · simp
-  · simp [min]
-    apply Int.min_eq_left
-    assumption
+  · simp [min, *]
 
 instance : ToString IntHigh where
   toString n := match n with
@@ -495,7 +518,6 @@ by
   cases l₁ <;> cases l₂ <;> cases h₁ <;> cases h₂ <;>
   try constructor
   rename_i a b c d
-  skip
   apply Int.le_trans
   · apply Int.min_le_left
   · apply Int.le_trans
@@ -503,6 +525,7 @@ by
       assumption
     · apply Int.le_max_left
 
+set_option maxHeartbeats 1000000 in
 theorem min_min_max_max : ∀ (l₁ l₂ l₃ : IntLow) (h₁ h₂ h₃ : IntHigh),
   max (max l₁ l₂) l₃ ≤∘ min (min h₁ h₂) h₃ →
   (max l₁ l₂ ≤∘ min h₁ h₂) ∧ (max l₂ l₃ ≤∘ min h₂ h₃) :=
@@ -979,20 +1002,23 @@ def widen (n : Nat) : Interval constants :=
         · apply extractMinGeCorrect constants h₂
       · assumption
 
+attribute [-simp] BoundedLattice.min_bot_is_bot
+
 theorem covering_left : ∀ (n : Nat),
   BoundedLattice.IsSubset x (x.widen y n) :=
 by
   intros n
-  cases x <;> simp [BoundedLattice.IsSubset, BoundedLattice.meet, meet, widen]
-  by_cases h : n ≤ 10 <;> simp [h, join] <;>
-  cases y <;> rename_i hle <;> simp [max, min, hle] <;> clear h
-  · simp [IntLow.max_min_absorb, IntHigh.min_max_absorb]
-    rename_i hle' _ _
-    simp [hle']
-  · rename_i l' h' hle' l h
-    split <;> split <;> try simp
-    · intro
-      contradiction
+  rcases x with _ | ⟨l', h', hle'⟩ <;>
+  simp only [BoundedLattice.IsSubset, Min.min, Meet.meet, meet, widen] <;>
+  -- case minf =>
+  --   by_cases h : n ≤ 10 <;> simp [h, join] <;>
+  --   simp
+  --   sorry
+  by_cases this: n ≤ 10 <;> simp [this, join] <;>
+  rcases y with _ | ⟨l, h, hle⟩ <;> simp [max, min, *]
+  · simp [IntLow.max_min_absorb, IntHigh.min_max_absorb, *]
+  · split <;> split <;> try simp
+    · assumption
     · have hyph : h'.Le h := by
         cases (IntHigh.Le_total h' h)
         · assumption
@@ -1002,8 +1028,7 @@ by
         apply IntHigh.Le_trans
         · assumption
         · apply extractMinGeCorrect
-      simp [hyph']
-      intro; contradiction
+      simpa [hyph']
     · have hypl : l.Le l' := by
         cases (IntLow.Le_total l l')
         · assumption
@@ -1013,9 +1038,7 @@ by
         apply IntLow.Le_trans
         · apply extractMaxGtCorrect
         · assumption
-      simp [hypl']
-      intro
-      contradiction
+      simpa [hypl']
     · have hypl : l.Le l' := by
         cases (IntLow.Le_total l l')
         · assumption
@@ -1034,37 +1057,33 @@ by
         apply IntHigh.Le_trans
         · assumption
         · apply extractMinGeCorrect
-      simp [hypl', hyph']
-      intro
-      contradiction
+      simpa [hypl', hyph']
 
 theorem covering_right : ∀ (n : Nat),
   BoundedLattice.IsSubset y (x.widen y n) :=
 by
   intros n
-  cases x <;> simp [BoundedLattice.IsSubset, BoundedLattice.meet, meet, widen] <;>
-  by_cases h : n ≤ 10 <;> cases y <;>
-  simp [h, join, bot] <;> clear h <;>
-  rename_i l h hle  <;> simp [max, min, hle] <;>
-  rename_i l' h' hle'
-  · rw [dif_pos] <;> (try simp) <;>
-    rw [IntLow.min_comm, IntHigh.max_comm, IntLow.max_min_absorb, IntHigh.min_max_absorb]
-    · constructor <;> rfl
-    · assumption
-  · have hypl : l = l.max (extractMaxGt constants l) := by
+  rcases x with _ | ⟨l,h,hle⟩ <;> simp [BoundedLattice.IsSubset, Min.min, Meet.meet, meet, widen] <;>
+  by_cases hc : n ≤ 10 <;>
+  rcases y with _ | ⟨l', h', hle'⟩ <;>
+  simp [hc, join]
+  · simp [Max.max, *]
+  · simp [Max.max, *]
+  · simp [Max.max, Min.min,
+      IntLow.max_min_absorb, IntLow.min_comm l,
+      IntHigh.min_max_absorb, IntHigh.max_comm h,
+      hle']
+  · have hypl : l' = l'.max (extractMaxGt constants l') := by
         rw [IntLow.max_eq_left]
         apply extractMaxGtCorrect
-    have hyph : h = h.min (extractMinGe constants h) := by
+    have hyph : h' = h'.min (extractMinGe constants h') := by
         rw [IntHigh.min_eq_left]
         apply extractMinGeCorrect
     split <;> split <;> rename_i hyp' hyp <;>
-    rw [dif_pos] <;> (try simp) <;>
-    (repeat first
-      | rw [IntLow.max_eq_left hyp']
-      | rw [IntHigh.min_eq_left hyp]
-      | rw [← hypl]
-      | rw [← hyph]
-    ) <;> solve | simp | assumption
+    simp only [Max.max, IntLow.max_eq_left, hyp',
+                        IntHigh.min_eq_left, hyp,
+                        hle', ↓reduceDIte,
+                        ←hyph, ←hypl]
 
 instance : Widen (Interval constants) where
   widen := widen
@@ -1084,16 +1103,6 @@ by
   have hx : x.meet x = x := BoundedLattice.meet_idempotent x
   have hy : y.meet y = y := BoundedLattice.meet_idempotent y
   simp [BoundedLattice.IsSubset, narrow]
-  conv =>
-    rhs
-    arg 2
-    rw [meet_commutative]
-  rw [meet_associative]
-  conv =>
-    rhs
-    arg 2
-    rw [←meet_associative, hy, meet_commutative]
-  rw [←meet_associative, hx]
 
 theorem bounding_high :
   ∀ (x y : Interval constants) (n : Nat),
@@ -1101,19 +1110,6 @@ theorem bounding_high :
 by
   intros x y n
   simp [narrow]
-  rw [BoundedLattice.IsSubset]
-  unfold BoundedLattice.meet
-  unfold BoundedLatticeInterval
-  simp
-  rw [meet_associative]
-  conv =>
-    rhs
-    arg 2
-    rw [meet_commutative]
-  rw [
-    ← meet_associative,
-    show x.meet x = x by apply BoundedLattice.meet_idempotent
-  ]
 
 instance : Narrow (Interval constants) where
   narrow := narrow
