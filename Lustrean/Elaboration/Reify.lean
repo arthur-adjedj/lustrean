@@ -245,7 +245,7 @@ instance : ToFormat Node where
     (formatAsserts n.asserts)
 end
 
-mutual
+
 partial def elabExpr (s : TSyntax `lustre_expr) : CoreM &Expr :=
   WithRef.withRef s do
   withTraceNode `Lustrean.Elab.Reify (msg := fun e => return m!"{exceptEmoji e} elabExpr\n{s}\n⇒\n{e.toOption.map toString}") do
@@ -291,49 +291,39 @@ partial def elabExpr (s : TSyntax `lustre_expr) : CoreM &Expr :=
       let args ← args.getElems.mapM elabExpr
       return .node ⟨f.getId, f⟩ args
     | `(lustre_expr| if $c then $tb else $eb) =>
-      let c ← elabBoolExpr c
+      let c ← elabExpr c
       let tb ← elabExpr tb
       let eb ← elabExpr eb
       return .ite c tb eb
-    | _ =>
-      throwErrorAt s m!"{repr s}"
-
-partial def elabBoolExpr (s : TSyntax `lustre_assertion) : CoreM (&Expr) :=
-  WithRef.withRef s do
-  withTraceNode `Lustrean.Elab.Reify (msg := fun e => return m!"{exceptEmoji e} elabBoolExpr\n{s}\n⇒\n{e.toOption.map toString}") do
-  match s with
-    | `(lustre_assertion| $l:lustre_expr ≤ $r:lustre_expr) =>
+    | `(lustre_expr| $l:lustre_expr ≤ $r:lustre_expr) =>
       let left ← elabExpr l
       let right ← elabExpr r
       return .cmp_op .leq left right
-    | `(lustre_assertion| $l:lustre_expr = $r:lustre_expr) =>
+    | `(lustre_expr| $l:lustre_expr = $r:lustre_expr) =>
       let left ← elabExpr l
       let right ← elabExpr r
       return .cmp_op .eq left right
-    | `(lustre_assertion| $l:lustre_expr < $r:lustre_expr) =>
+    | `(lustre_expr| $l:lustre_expr < $r:lustre_expr) =>
       let left ← elabExpr l
       let right ← elabExpr r
       return .cmp_op .lt left right
-    | `(lustre_assertion| $l:lustre_assertion ∧ $r:lustre_assertion) =>
-      let left ← elabBoolExpr l
-      let right ← elabBoolExpr r
+    | `(lustre_expr| $l:lustre_expr ∧ $r:lustre_expr) =>
+      let left ← elabExpr l
+      let right ← elabExpr r
       return .bin_op .and left right
-    | `(lustre_assertion| $l:lustre_assertion ∨ $r:lustre_assertion) =>
-      let left ← elabBoolExpr l
-      let right ← elabBoolExpr r
+    | `(lustre_expr| $l:lustre_expr ∨ $r:lustre_expr) =>
+      let left ← elabExpr l
+      let right ← elabExpr r
       return .bin_op .or left right
-    | ref =>
-      println! s!"{repr ref}"
-      withRef ref throwUnsupportedSyntax
-end
+    | _ =>
+      throwErrorAt s m!"{repr s}"
 
 def elabNode (s : TSyntax `lustre_node) : CoreM (&Node) :=
   withTraceNode `Lustrean.Elab.Reify
     (msg := fun e =>
       return m!"{exceptEmoji e} elabNode\n{s}\n⇒\n{if let .ok n := e then toMessageData n else ""}") do
-  match s with
-  | `(lustre_node| node $name($inputs:ident,*) $[= $output_vars,*]? $[guard $guards*]?
-                   where $decls* $[assert $asserts*]?) =>
+  match s with --  $[assert $asserts*]?
+  | `(lustre_node| node $name($inputs,*) $[ = $output_vars:ident,*]? $[ guard $[$guards]*]? where $decls* $[ assert $[$asserts]*]?) =>
     let name := ⟨name.getId, name⟩
     let input_vars := inputs.getElems.map fun x => ⟨x.getId, x⟩
     let bound_vars ← decls.mapM fun
@@ -343,8 +333,8 @@ def elabNode (s : TSyntax `lustre_node) : CoreM (&Node) :=
       }
       | ref => withRef ref throwUnsupportedSyntax
     let output_vars := output_vars.map (·.getElems.map (fun var => ⟨var.getId, var⟩)) |>.getD default
-    let guards ← guards.getD #[] |>.mapM elabBoolExpr
-    let asserts ← asserts.getD #[] |>.mapM elabBoolExpr
+    let guards ← guards.getD #[] |>.mapM elabExpr
+    let asserts ← asserts.getD #[] |>.mapM elabExpr
     return ⟨{name, input_vars, bound_vars, output_vars, guards, asserts}, s⟩
   | _ =>
     throwUnsupportedSyntax
