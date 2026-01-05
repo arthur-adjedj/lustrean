@@ -44,6 +44,8 @@ inductive BinOp where
   | add
   | sub
   | mul
+  | and
+  | or
   deriving Repr, Inhabited
 
   namespace BinOp
@@ -51,6 +53,8 @@ protected def toString : BinOp → String
   | add => "+"
   | sub => "-"
   | mul => "*"
+  | and => "∧"
+  | or => "∨"
 
 instance : ToString BinOp where
   toString := BinOp.toString
@@ -58,21 +62,16 @@ end BinOp
 
 section
 variable (n m : Nat)
-
 inductive SimpleExpr where
   | interval (lb : LowerBound) (up : UpperBound)
   | var (k : VarRef n m)
   | bin_op (op : BinOp) (left right : SimpleExpr)
-  deriving Repr, Inhabited
-
-inductive BoolExpr where
-  | cmp_op (op : CmpOp) (left right : SimpleExpr n m)
-  | bin_op (op : BoolBinOp) (left right : BoolExpr)
+  | cmp_op (op : CmpOp) (left right : SimpleExpr)
   deriving Repr, Inhabited
 
 inductive Expr where
   | simple (e : SimpleExpr n m)
-  | ite (cond : BoolExpr n m) (tb : SimpleExpr n m) (eb : SimpleExpr n m)
+  | ite (cond : SimpleExpr n m) (tb : SimpleExpr n m) (eb : SimpleExpr n m)
   deriving Repr, Inhabited
 end
 
@@ -83,10 +82,7 @@ def SimpleExpr.upcast : SimpleExpr n m → SimpleExpr n m'
   | .interval lb up => .interval lb up
   | .var v => .var (v.upcast h)
   | .bin_op op l r => .bin_op op l.upcast r.upcast
-
-def BoolExpr.upcast : BoolExpr n m → BoolExpr n m'
-  | .cmp_op op left right => .cmp_op op (left.upcast h) (right.upcast h)
-  | .bin_op op left right => .bin_op op left.upcast right.upcast
+  | .cmp_op op left right => .cmp_op op left.upcast right.upcast
 
 def Expr.upcast : Expr n m → Expr n m'
   | .simple e => .simple <| e.upcast h
@@ -112,11 +108,8 @@ def SimpleExpr.toString : SimpleExpr n m → String
   | .var (.input_var k) => s!"{input_vars[k].name.toString}"
   | .var (.bound_var k) => s!"{bound_vars[k].name.toString}"
   | .var .step => "step"
+  | .cmp_op op l r
   | .bin_op op l r => s!"({l.toString} {op} {r.toString})"
-
-def BoolExpr.toString : BoolExpr n m → String
-  | .cmp_op op left right
-  | .bin_op op left right => s!"({left.toString} {op} {right.toString})"
 
 def Expr.toString : Expr n m → String
   | .simple e => e.toString
@@ -130,8 +123,8 @@ structure Node where
   input_vars : Vector Var n
   bound_vars : Vector (BoundVar n m) m
   output_vars : Array &(VarRef n m)
-  guards : Array (BoolExpr n m)
-  asserts : Array &(BoolExpr n m)
+  guards : Array (Expr n m)
+  asserts : Array &(Expr n m)
   deriving Repr, Inhabited
 
 namespace Node
@@ -159,13 +152,13 @@ def formatOutputVars (nod : Node) (output_vars : Array &(VarRef n m)) : Format :
   if output_vars.size = 0 then "" else
   " = " ++ joinSep (output_vars.map (nod[·.value]!.name) |>.toList) ","
 
-def formatGuards (guards : Array (BoolExpr n m)) : Format :=
+def formatGuards (guards : Array (Expr n m)) : Format :=
   if guards.size = 0 then "" else
-  Std.Format.indentD <| "guard" ++ Std.Format.indentD (joinSep (guards.map (BoolExpr.toString input_vars bound_vars) |>.toList) Format.line)
+  Std.Format.indentD <| "guard" ++ Std.Format.indentD (joinSep (guards.map (Expr.toString input_vars bound_vars) |>.toList) Format.line)
 
-def formatAsserts (asserts : Array &(BoolExpr n m)) : Format :=
+def formatAsserts (asserts : Array &(Expr n m)) : Format :=
   if asserts.size = 0 then "" else
-  Std.Format.indentD <| "assert" ++ Std.Format.indentD (joinSep (asserts.map (BoolExpr.toString input_vars bound_vars ∘ WithRef.value) |>.toList) Format.line)
+  Std.Format.indentD <| "assert" ++ Std.Format.indentD (joinSep (asserts.map (Expr.toString input_vars bound_vars ∘ WithRef.value) |>.toList) Format.line)
 
 instance : ToFormat Node where
   format n :=
@@ -248,7 +241,6 @@ instance {α : Nat → Nat → Type} (n m : Nat) [Inhabited (α n m)] : Inhabite
 
 private abbrev AuxExpr := AuxHelper Expr
 private abbrev AuxSimpleExpr := AuxHelper SimpleExpr
-private abbrev AuxBoolExpr := AuxHelper BoolExpr
 
 mutual
 partial def elabSimpleExprAux {n m : Nat} (nod : NodeN n m) (e : Indicise.Expr n m)
@@ -309,6 +301,22 @@ partial def elabExprAux {n m : Nat} (nod : NodeN n m) : Indicise.Expr n m → No
       e := .simple <| .bin_op .mul (e₁.upcast m₁_leq_m₂) e₂
       nod := nod
     }
+  | .bin_op .and ⟨e₁, _⟩ ⟨e₂, _⟩ => do
+    let ⟨_, m_leq_m₁, e₁, nod⟩ ← elabSimpleExprAux nod e₁
+    let ⟨m₂, m₁_leq_m₂, e₂, nod⟩ ← elabSimpleExprAux nod (e₂.upcast m_leq_m₁)
+    return {
+      m' := m₂
+      e := .simple <| .bin_op .and (e₁.upcast m₁_leq_m₂) e₂
+      nod := nod
+    }
+  | .bin_op .or ⟨e₁, _⟩ ⟨e₂, _⟩ => do
+    let ⟨_, m_leq_m₁, e₁, nod⟩ ← elabSimpleExprAux nod e₁
+    let ⟨m₂, m₁_leq_m₂, e₂, nod⟩ ← elabSimpleExprAux nod (e₂.upcast m_leq_m₁)
+    return {
+      m' := m₂
+      e := .simple <| .bin_op .or (e₁.upcast m₁_leq_m₂) e₂
+      nod := nod
+    }
   | .bin_op .fby ⟨e₁, _⟩ ⟨e₂, _⟩ => do
     let ⟨_, m_leq_m₁, e₁, nod⟩ ← elabSimpleExprAux nod e₁
     let ⟨m₂, _, e₂, nod⟩ ← elabExprAux nod (e₂.upcast m_leq_m₁)
@@ -329,33 +337,22 @@ partial def elabExprAux {n m : Nat} (nod : NodeN n m) : Indicise.Expr n m → No
       e := .ite cond (e₁.upcast <| by omega) (e₂.upcast <| by omega)
       nod := nod
     }
+  | .cmp_op op ⟨l, _⟩ ⟨r, _⟩ => do
+    let ⟨_, m_leq_m₁, l, nod⟩ ← elabSimpleExprAux nod l
+    let ⟨m₂, m₁_leq_m₂, r, nod⟩ ← elabSimpleExprAux nod (r.upcast m_leq_m₁)
+    return {
+      m' := m₂
+      e := .simple <| .cmp_op op (l.upcast m₁_leq_m₂) r
+      nod
+    }
   | .ite ⟨cond, _⟩ ⟨e₁, _⟩ ⟨e₂, _⟩ => do
-    let ⟨_, _, cond, nod⟩ ← elabBoolexprAux nod cond
+    let ⟨_, _, cond, nod⟩ ← elabSimpleExprAux nod cond
     let ⟨_, _, e₁, nod⟩ ← elabSimpleExprAux nod (e₁.upcast <| by omega)
     let ⟨m₃, _, e₂, nod⟩ ← elabSimpleExprAux nod (e₂.upcast <| by omega)
     return {
       m' := m₃
       e := .ite (cond.upcast <| by omega) (e₁.upcast <| by omega) e₂
       nod := nod
-    }
-
-partial def elabBoolexprAux {n m : Nat} (nod : NodeN n m)
-                              : Indicise.BoolExpr n m → NormalizeM (AuxBoolExpr n m)
-  | .bin_op op ⟨l, _⟩ ⟨r, _⟩ => do
-    let ⟨_, m_leq_m₁, l, nod⟩ ← elabBoolexprAux nod l
-    let ⟨m₂, m₁_leq_m₂, r, nod⟩ ← elabBoolexprAux nod (r.upcast m_leq_m₁)
-    return {
-      m' := m₂
-      e := .bin_op op (l.upcast m₁_leq_m₂) r
-      nod := nod
-    }
-  | .cmp_op op ⟨l, _⟩ ⟨r, _⟩ => do
-    let ⟨_, m_leq_m₁, l, nod⟩ ← elabSimpleExprAux nod l
-    let ⟨m₂, m₁_leq_m₂, r, nod⟩ ← elabSimpleExprAux nod (r.upcast m_leq_m₁)
-    return {
-      m' := m₂
-      e := .cmp_op op (l.upcast m₁_leq_m₂) r
-      nod
     }
 end
 
@@ -405,11 +402,11 @@ def elabNode (nod : &Indicise.Node) : CoreM &Node :=
         new_nod.val.m ≤ m' := m_leq_m'
         m' = hnod.m := by symm; assumption
   for g in nod.guards do
-    let g : Indicise.BoolExpr new_nod.val.n new_nod.val.m :=
+    let g : Indicise.Expr new_nod.val.n new_nod.val.m :=
       new_nod.property.1 ▸ g.value.upcast new_nod.property.2
     let { m', e, nod := ⟨hnod, hnod_m_m', hnod_n_nod_n⟩, m_leq_m', .. } ←
-      elabBoolexprAux ⟨new_nod, rfl, rfl⟩ g
-    let b : BoolExpr hnod.n hnod.m := hnod_m_m' ▸ hnod_n_nod_n ▸ e
+      elabExprAux ⟨new_nod, rfl, rfl⟩ g
+    let b : Expr hnod.n hnod.m := hnod_m_m' ▸ hnod_n_nod_n ▸ e
     new_nod := .mk {
       hnod with
       guards := hnod.guards.push b
@@ -424,11 +421,11 @@ def elabNode (nod : &Indicise.Node) : CoreM &Node :=
         m' = hnod.m := by symm; assumption
   for a in nod.asserts do
     let ref := a.ref
-    let a : Indicise.BoolExpr new_nod.val.n new_nod.val.m :=
+    let a : Indicise.Expr new_nod.val.n new_nod.val.m :=
       new_nod.property.1 ▸ a.value.upcast new_nod.property.2
     let { m', e, nod := ⟨hnod, hnod_m_m', hnod_n_nod_n⟩, m_leq_m', .. } ←
-      elabBoolexprAux ⟨new_nod, rfl, rfl⟩ a
-    let b : BoolExpr hnod.n hnod.m := hnod_m_m' ▸ hnod_n_nod_n ▸ e
+      elabExprAux ⟨new_nod, rfl, rfl⟩ a
+    let b : Expr hnod.n hnod.m := hnod_m_m' ▸ hnod_n_nod_n ▸ e
     new_nod := .mk {
       hnod with
       asserts := hnod.asserts.push { value := b, ref }

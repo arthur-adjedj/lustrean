@@ -29,47 +29,31 @@ namespace Lustrean.Elaboration
 namespace Inline
 export Reify (Variable)
 
-mutual
 inductive Expr where
   | interval (lb : &LowerBound) (up : &UpperBound)
   | var (name : &Name)
   | mon_op (op : MonOp) (e : &Expr)
   | bin_op (op : Reify.BinOp) (left right : &Expr)
-  | ite (cond : &BoolExpr) (tb eb : &Expr)
-  deriving Repr, Inhabited
-
-inductive BoolExpr where
+  | ite (cond : &Expr) (tb eb : &Expr)
   | cmp_op (op : CmpOp) (left right : &Expr)
-  | bin_op (op : BoolBinOp) (left right : &BoolExpr)
   deriving Repr, Inhabited
-end
 
-mutual
 partial def Expr.toString : Expr → String
   | .interval {value := .nat n,..} {value := .nat k,..} => if n = k then s!"{n}" else s!"[{n},{k}]"
   | .interval lb up => s!"[{lb},{up}]"
-  | .var v => toString v.value
+  | .var v => v.value.toString
   | .mon_op op e => s!"{op.toString} {Expr.toString e}"
   | .bin_op op e₁ e₂ => s!"{Expr.toString e₁} {op.toString} {Expr.toString e₂}"
-  | .ite cond tb eb => s!"if {BoolExpr.toString cond} then {Expr.toString tb} else {Expr.toString eb}"
-
-partial def BoolExpr.toString : BoolExpr → String
+  | .ite cond tb eb => s!"if {Expr.toString cond} then {Expr.toString tb} else {Expr.toString eb}"
   | .cmp_op op left right => s!"{Expr.toString left.value} {op.toString} {Expr.toString right.value}"
-  | .bin_op op left right => s!"{BoolExpr.toString left.value} {op.toString} {BoolExpr.toString right.value}"
-end
 
 instance : ToString Expr where
   toString := Expr.toString
-
-instance : ToString BoolExpr where
-  toString := BoolExpr.toString
-
 
 structure BoundVar extends Variable where
   value : &Expr
   deriving Repr, Inhabited
 
-mutual
 variable (pre₁ : Name)
 def Expr.with_prefix : Expr → Expr
   | .interval lb up => .interval lb up
@@ -77,31 +61,27 @@ def Expr.with_prefix : Expr → Expr
   | .mon_op op e => .mon_op op (e.map (·.with_prefix))
   | .bin_op op l r => .bin_op op (l.map (·.with_prefix)) (r.map (·.with_prefix))
   | .ite cond tb eb => .ite (cond.map (·.with_prefix)) (tb.map (·.with_prefix)) (eb.map (·.with_prefix))
+  | .cmp_op op l r => .cmp_op op (l.map (·.with_prefix)) (r.map (·.with_prefix))
 termination_by e => sizeOf e
 
-def BoolExpr.with_prefix : BoolExpr → BoolExpr
-  | .cmp_op op l r => .cmp_op op (l.map (·.with_prefix)) (r.map (·.with_prefix))
-  | .bin_op op l r => .bin_op op (l.map (·.with_prefix)) (r.map (·.with_prefix))
-termination_by e => sizeOf e
-end
 
 structure Node where
   name : &Name
   input_vars : Array Variable
   bound_vars : Array BoundVar
   output_vars : Array (&Name)
-  guards : Array (&BoolExpr)
-  asserts : Array (&BoolExpr)
+  guards : Array (&Expr)
+  asserts : Array (&Expr)
   deriving Repr, Inhabited
 
 section
 open Std.Format
 
-def formatGuards (guards : Array (&BoolExpr)) : Format :=
+def formatGuards (guards : Array (&Expr)) : Format :=
   if guards.size = 0 then "" else
   Std.Format.indentD <| "guard" ++ Std.Format.indentD (joinSep (guards |>.toList) Format.line)
 
-def formatAsserts (asserts : Array (&BoolExpr)) : Format :=
+def formatAsserts (asserts : Array (&Expr)) : Format :=
   if asserts.size = 0 then "" else
   Std.Format.indentD <| "assert" ++ Std.Format.indentD (joinSep (asserts |>.toList) Format.line)
 
@@ -140,11 +120,11 @@ def addVar (var : BoundVar) : NodeAddT m PUnit := do
   let nod ← StateT.get
   StateT.set { nod with bound_vars := nod.bound_vars.push var }
 
-def addGuard (g : &BoolExpr) : NodeAddT m PUnit := do
+def addGuard (g : &Expr) : NodeAddT m PUnit := do
   let nod ← StateT.get
   StateT.set { nod with guards := nod.guards.push g }
 
-def addAssert (a : &BoolExpr) : NodeAddT m PUnit := do
+def addAssert (a : &Expr) : NodeAddT m PUnit := do
   let nod ← StateT.get
   StateT.set { nod with asserts := nod.asserts.push a }
 end NodeAddT
@@ -157,10 +137,10 @@ abbrev InlineM := NodeAddT CoreM
   abbrev addVar (var : BoundVar) : InlineM PUnit :=
     NodeAddT.addVar var
 
-  abbrev addGuard (g : &BoolExpr) : InlineM PUnit :=
+  abbrev addGuard (g : &Expr) : InlineM PUnit :=
     NodeAddT.addGuard g
 
-  abbrev addAssert (a : &BoolExpr) : InlineM PUnit :=
+  abbrev addAssert (a : &Expr) : InlineM PUnit :=
     NodeAddT.addAssert a
 
   protected def run (name : &Name) (input_vars : Array Variable) (output_vars : Array (&Name))
@@ -178,7 +158,6 @@ section
 variable (env : HashMap Name Node)
 include env
 
-mutual
 partial def elabExprAux (bounds : Option (Array (&Name))) (var_name : Name) (e : &Reify.Expr)
                           : CounterT InlineM (&Expr) :=
   e.mapM fun
@@ -191,8 +170,12 @@ partial def elabExprAux (bounds : Option (Array (&Name))) (var_name : Name) (e :
       let left ← elabExprAux none var_name l
       let right ← elabExprAux none var_name r
       do_bounds <| .bin_op op left right
+    | .cmp_op op l r => do
+      let left ← elabExprAux none var_name l |>.run
+      let right ← elabExprAux none var_name r |>.run
+      do_bounds <| .cmp_op op left right
     | .ite cond tb eb => do
-      let cond ← elabBoolexprAux var_name cond
+      let cond ← elabExprAux none var_name cond
       let tb ← elabExprAux none var_name tb
       let eb ← elabExprAux none var_name eb
       do_bounds <| .ite cond tb eb
@@ -244,24 +227,12 @@ where
     return ⟨e', e.ref⟩
 
 
-partial def elabBoolexprAux (pre₁ : Name) (b : &Reify.BoolExpr) : InlineM (&BoolExpr) :=
-  b.mapM fun
-    | .bin_op op l r => do
-      let left ← elabBoolexprAux pre₁ l
-      let right ← elabBoolexprAux pre₁ r
-      return .bin_op op left right
-    | .cmp_op op l r => do
-      let left ← elabExprAux none pre₁ l |>.run
-      let right ← elabExprAux none pre₁ r |>.run
-      return .cmp_op op left right
-end
-
 def elabExpr (bounds : Array (&Name)) (e : &Reify.Expr) : InlineM Unit := do
   let _ ← elabExprAux env bounds bounds[0]! e |>.run
   return ()
 
-def elabBoolexpr (guards : Bool) (i : Nat) (b : &Reify.BoolExpr) : InlineM Unit := do
-  let b ← elabBoolexprAux env ((if guards then `guards else `asserts) ++ (.str .anonymous s!"x_{i}")) b
+def elabBoolexpr (guards : Bool) (b : &Reify.Expr) : CounterT InlineM Unit := do
+  let b ← elabExprAux env none ((if guards then `guards else `asserts) ++ (Name.str .anonymous s!"x_")) b
   if guards then
     addGuard b
   else
@@ -275,10 +246,13 @@ def elabNode (nod : &Reify.Node) : CoreM (&Node) :=
   InlineM.run nod.name nod.input_vars nod.output_vars do
         for { names, value } in nod.bound_vars do
           elabExpr env names value
-        for (b, i) in nod.guards.zipIdx do
-          elabBoolexpr env true i b
-        for (b, i) in nod.asserts.zipIdx do
-          elabBoolexpr env false i b
+        elabGuardAssert true nod.guards |>.run
+        elabGuardAssert false nod.asserts |>.run
+where
+  elabGuardAssert (guards : Bool) (ops : Array &Reify.Expr) : CounterT InlineM Unit := do
+    for b in ops do
+      elabBoolexpr env guards b
+
 end
 
 def elabLustre (nodes : Array (&Reify.Node)) : CoreM (Array (&Node)) := do
