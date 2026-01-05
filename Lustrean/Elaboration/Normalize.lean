@@ -123,8 +123,8 @@ structure Node where
   input_vars : Vector Var n
   bound_vars : Vector (BoundVar n m) m
   output_vars : Array &(VarRef n m)
-  guards : Array (Expr n m)
-  asserts : Array &(Expr n m)
+  guards : Array (SimpleExpr n m)
+  asserts : Array &(SimpleExpr n m)
   deriving Repr, Inhabited
 
 namespace Node
@@ -152,13 +152,13 @@ def formatOutputVars (nod : Node) (output_vars : Array &(VarRef n m)) : Format :
   if output_vars.size = 0 then "" else
   " = " ++ joinSep (output_vars.map (nod[·.value]!.name) |>.toList) ","
 
-def formatGuards (guards : Array (Expr n m)) : Format :=
+def formatGuards (guards : Array (SimpleExpr n m)) : Format :=
   if guards.size = 0 then "" else
-  Std.Format.indentD <| "guard" ++ Std.Format.indentD (joinSep (guards.map (Expr.toString input_vars bound_vars) |>.toList) Format.line)
+  Std.Format.indentD <| "guard" ++ Std.Format.indentD (joinSep (guards.map (SimpleExpr.toString input_vars bound_vars) |>.toList) Format.line)
 
-def formatAsserts (asserts : Array &(Expr n m)) : Format :=
+def formatAsserts (asserts : Array &(SimpleExpr n m)) : Format :=
   if asserts.size = 0 then "" else
-  Std.Format.indentD <| "assert" ++ Std.Format.indentD (joinSep (asserts.map (Expr.toString input_vars bound_vars ∘ WithRef.value) |>.toList) Format.line)
+  Std.Format.indentD <| "assert" ++ Std.Format.indentD (joinSep (asserts.map (SimpleExpr.toString input_vars bound_vars ∘ WithRef.value) |>.toList) Format.line)
 
 instance : ToFormat Node where
   format n :=
@@ -407,6 +407,7 @@ def elabNode (nod : &Indicise.Node) : CoreM &Node :=
     let { m', e, nod := ⟨hnod, hnod_m_m', hnod_n_nod_n⟩, m_leq_m', .. } ←
       elabExprAux ⟨new_nod, rfl, rfl⟩ g
     let b : Expr hnod.n hnod.m := hnod_m_m' ▸ hnod_n_nod_n ▸ e
+    let .simple b := b | throwError "All guards must be simple expressions, i.e not contain any if-then-else"
     new_nod := .mk {
       hnod with
       guards := hnod.guards.push b
@@ -426,6 +427,7 @@ def elabNode (nod : &Indicise.Node) : CoreM &Node :=
     let { m', e, nod := ⟨hnod, hnod_m_m', hnod_n_nod_n⟩, m_leq_m', .. } ←
       elabExprAux ⟨new_nod, rfl, rfl⟩ a
     let b : Expr hnod.n hnod.m := hnod_m_m' ▸ hnod_n_nod_n ▸ e
+    let .simple b := b | throwError "All asserts must be simple expressions, i.e not contain any if-then-else"
     new_nod := .mk {
       hnod with
       asserts := hnod.asserts.push { value := b, ref }
