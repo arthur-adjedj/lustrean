@@ -29,8 +29,7 @@ class BoundedLattice (α : Type) extends Bot α, Top α, Meet α, Join α where
   -- join gives the lowest upper bound. Same with meet giving the greatest
   -- lower bound. Do we want to include these restrictions?
 
-section instances
-instance {α: Type}[Lattice α][BoundedOrder α] : BoundedLattice α where
+def BoundedLattice.ofLatticeAndBoundedOrder {α: Type}[Lattice α][BoundedOrder α] : BoundedLattice α where
   bot := ⊥
   top := ⊤
   join x y := x ⊔ y
@@ -45,8 +44,6 @@ instance {α: Type}[Lattice α][BoundedOrder α] : BoundedLattice α where
   meet_absorption x y := by simp
   meet_bot := by simp
   meet_top := by simp
-
-end instances
 
 
 namespace BoundedLattice
