@@ -6,12 +6,12 @@ variable [ι : ValueDomain α]
 variable (x y z : NonRelational α n)
 
 @[simp]
-theorem _root_.Vector.ofFn_get_self{α: Type}{n: Nat}(v: Vector α n)
-: Vector.ofFn (fun i => v.get i) = v
+theorem _root_.Vector.ofFn_getElem_self{α: Type}{n: Nat}(v: Vector α n)
+: Vector.ofFn (fun i => v[i.val] ) = v
 := by ext; simp [getElem]
 
-@[simp, grind =]
-theorem meet_top : x.meet top = x := by
+@[simp]
+theorem meet_top : meet x top = x := by
   match x with
   | .bot => simp [meet, map2Nil]
   | .non_rel ⟨x, x_prop⟩ =>
@@ -38,6 +38,7 @@ theorem bot_meet : bot.meet x = bot := by simp [meet_bot, meet_commutative]
 @[simp]
 theorem top_meet : top.meet x = x   := by simp [meet_top, meet_commutative]
 
+set_option maxHeartbeats 1000000 in
 theorem meet_associative : meet (meet x y) z = meet x (meet y z) := by
   cases x with
   | bot => simp
@@ -52,26 +53,51 @@ theorem meet_associative : meet (meet x y) z = meet x (meet y z) := by
   | bot => simp
   | non_rel z' =>
   obtain ⟨z, z_prop⟩ := z'
-  simp [meet, map2Nil]
-  simp only [meet, map2Nil, coalesce]
-  simp only [Vector.get_of_fn_fin]
-  if h : ∀ i : Fin (n+1), x.get i ⊓ y.get i ⊓ z.get i ≠ ⊥ then
-    have: ∀ i : Fin (n+1), x.get i ⊓ y.get i ≠ ⊥ := by
-      grind [BoundedLattice.meet_associative, BoundedLattice.meet_commutative, BoundedLattice.meet_bot]
-    have: ∀ i : Fin (n+1), y.get i ⊓ z.get i ≠ ⊥ := by
-      grind [BoundedLattice.meet_associative, BoundedLattice.meet_commutative, BoundedLattice.meet_bot]
-    simp [*]
+  simp only [meet, map2Nil, Fin.getElem_fin, ne_eq]
+  if h : ∀ i : Fin (n+1), ¬ x[i.val] ⊓ y[i.val] ⊓ z[i.val] = ⊥ then
+    have h_xy: ∀ i : Fin (n+1), ¬ x[i.val] ⊓ y[i.val] = ⊥ := by
+      intros i h'
+      specialize h i
+      rw [h'] at h
+      simp at h
+    have h_yz: ∀ i : Fin (n+1), ¬ y[i.val] ⊓ z[i.val] = ⊥ := by
+      intros i h'
+      specialize h i
+      rw [BoundedLattice.meet_associative, h'] at h
+      simp at h
+    unfold coalesce
+    simp at h_xy h_yz
+    simp [h_xy, h_yz]
   else
-    by_cases ∀ i: Fin (n+1), x.get i ⊓ y.get i ≠ ⊥ <;>
-    by_cases ∀ i : Fin (n+1), y.get i ⊓ z.get i ≠ ⊥ <;>
-    simp [*]
+    unfold coalesce
+    if h_xy: ∀ i : Fin (n+1), ¬ x[i.val] ⊓ y[i.val] = ⊥ then
+      if h_yz: ∀ i : Fin (n+1), ¬ y[i.val] ⊓ z[i.val] = ⊥ then
+        simp [h_xy, h_yz]
+      else
+        simp [h_xy, h_yz, h]
+        simp at h_yz
+        obtain ⟨e, P⟩ := h_yz
+        exists e
+        simp [P]
+    else
+      simp [h_xy]
+      if h_yz: ∀ i : Fin (n+1), ¬ y[i.val] ⊓ z[i.val] = ⊥ then
+        simp [h_yz]
+        simp at h_xy
+        obtain ⟨e, P⟩ := h_xy
+        exists e
+        rw [←BoundedLattice.meet_associative]
+        simp [P]
+      else
+        simp [h_yz]
 
 theorem meet_absorption : meet x (join x y) = x := by
   match x, y with
   | .bot, _ =>
     simp [meet, map2Nil]
   | .non_rel ⟨x, x_prop⟩, .bot =>
-    simp [join, meet, map2Nil, coalesce, BoundedLattice.meet_idempotent, *]
+    grind only [meet, map2Nil, join, Fin.getElem_fin, coalesce, le_refl, inf_of_le_left,
+      Vector.getElem_ofFn, non_rel.injEq, Subtype.mk.injEq]
   | .non_rel ⟨x, x_prop⟩, .non_rel ⟨y, y_prop⟩ =>
     simp [meet, map2Nil, join, coalesce, *]
 

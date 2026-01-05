@@ -3,25 +3,31 @@ import Mathlib.Order.Lattice
 import Lustrean.Imp
 
 namespace Lustrean
-class BoundedLattice (α : Type) where
-  bot : α
-  top : α
+
+class Join α where
   join : α → α → α
+export Join (join)
+instance{α: Type}[Join α]: Max α where max := Join.join
+
+class Meet α where
   meet : α → α → α
-  join_commutative : ∀ (x y : α), join x y = join y x
-  join_associative : ∀ (x y z : α), join (join x y) z = join x (join y z)
-  join_absorption : ∀ (x y : α), join x (meet x y) = x
-  join_bot : ∀ (x : α), join x bot = x
-  join_top : ∀ (x : α), join x top = top
-  meet_commutative : ∀ (x y : α), meet x y = meet y x
-  meet_associative : ∀ (x y z : α), meet (meet x y) z = meet x (meet y z)
-  meet_absorption : ∀ (x y : α), meet x (join x y) = x
-  meet_top : ∀ (x : α), meet x top = x
-  meet_bot : ∀ (x : α), meet x bot = bot
+export Meet (meet)
+instance{α: Type}[Meet α]: Min α where min := Meet.meet
+
+class BoundedLattice (α : Type) extends Bot α, Top α, Meet α, Join α where
+  join_commutative : ∀ (x y : α), x ⊔ y = y ⊔ x
+  join_associative : ∀ (x y z : α), (x ⊔ y) ⊔ z = x ⊔ (y ⊔ z)
+  join_absorption : ∀ (x y : α), x ⊔ (x ⊓ y) = x
+  join_bot : ∀ (x : α), x ⊔ bot = x
+  join_top : ∀ (x : α), x ⊔ top = top
+  meet_commutative : ∀ (x y : α), x ⊓ y = y ⊓ x
+  meet_associative : ∀ (x y z : α), (x ⊓ y) ⊓ z = x ⊓ (y ⊓ z)
+  meet_absorption : ∀ (x y : α), x ⊓ (x ⊔ y) = x
+  meet_top : ∀ (x : α), x ⊓ top = x
+  meet_bot : ∀ (x : α), x ⊓ bot = bot
   -- With how we have defined `BoundedLattice`, we don't require that
   -- join gives the lowest upper bound. Same with meet giving the greatest
   -- lower bound. Do we want to include these restrictions?
-export BoundedLattice (bot top join meet)
 
 section instances
 instance {α: Type}[Lattice α][BoundedOrder α] : BoundedLattice α where
@@ -40,19 +46,12 @@ instance {α: Type}[Lattice α][BoundedOrder α] : BoundedLattice α where
   meet_bot := by simp
   meet_top := by simp
 
-instance{α: Type}[BoundedLattice α]: Bot α where bot := bot
-instance{α: Type}[BoundedLattice α]: Top α where top := top
-instance{α: Type}[BoundedLattice α]: Max α where max := join
-instance{α: Type}[BoundedLattice α]: Min α where min := meet
 end instances
-
-attribute [local simp] Bot.bot Top.top Max.max Min.min
 
 
 namespace BoundedLattice
 variable {α : Type} [ι : BoundedLattice α]
 
-attribute [simp] bot top join meet
 attribute [simp]
 join_associative join_absorption join_bot join_top
 meet_associative meet_absorption meet_bot meet_top
@@ -60,8 +59,8 @@ meet_associative meet_absorption meet_bot meet_top
 def IsBot : α → Prop :=
   (· = ⊥)
 
-def IsSubset : α → α → Prop :=
-  fun x y => x = meet x y
+def IsSubset {α: Type}[Min α]: α → α → Prop :=
+  fun x y => x = x ⊓ y
 
 infixr:50 " ⊑ " => IsSubset
 
@@ -74,11 +73,11 @@ theorem trans : ∀ {x y z : α}, x ⊑ y → y ⊑ z → x ⊑ z := by
     rw [Hy]
   rw [meet_associative]
 
-instance : Trans (@IsSubset α ι) (@IsSubset α ι) (@IsSubset α ι) where
+instance : Trans (IsSubset (α := α)) (IsSubset (α := α)) (IsSubset (α := α)) where
   trans := trans
 
 theorem bot_min : ∀ {x : α}, ⊥ ⊑ x := by
-  simp [IsSubset, meet_commutative, Bot.bot]
+  simp [IsSubset, meet_commutative ⊥]
 
 theorem antisymm : ∀ {x y : α}, x ⊑ y → y ⊑ x → x = y := by
   intros x y H H'
@@ -88,14 +87,14 @@ theorem antisymm : ∀ {x y : α}, x ⊑ y → y ⊑ x → x = y := by
   symm
   assumption
 
-instance : Std.Antisymm (@IsSubset α ι) where
+instance : Std.Antisymm (IsSubset (α := α)) where
   antisymm := @antisymm _ _
 
 local instance instBoundedLatticeLE : LE α where
   le := IsSubset
 
 @[simp]
-theorem min_bot_is_bot : ∀ {x : α}, x ⊑ ⊥ → x = bot := by
+theorem min_bot_is_bot : ∀ {x : α}, x ⊑ ⊥ → x = ⊥ := by
   intros x H
   apply antisymm
   · assumption
@@ -109,7 +108,6 @@ theorem min_join_left : ∀ {x y : α}, x ⊑ x ⊔ y := by
 
 theorem min_join_right : ∀ {x y : α}, y ⊑ x ⊔ y := by
   intros
-  simp
   rw [join_commutative]
   apply min_join_left
 
@@ -122,14 +120,13 @@ theorem join_eq_bot_iff_bot : ∀ {x y : α}, x ⊔ y = ⊥ ↔ x = ⊥ ∧ y = 
       have : a = a ⊓ (a ⊔ b) := by simp
       rw [this, Ha]
       simp
-    constructor <;> apply this <;> first | assumption | (simp;rw [join_commutative]) <;> assumption
+    constructor <;> apply this <;> first | assumption | rw [join_commutative] <;> assumption
   · intro ⟨ Hx, Hy ⟩
     simp [Hx, Hy]
 
 theorem meet_not_bot_left : ∀ {x y : α}, x ⊓ y ≠ ⊥ → x ≠ ⊥ := by
   intros x y H Hc
   apply H
-  simp
   rw [Hc, meet_commutative]
   simp
 
@@ -139,12 +136,12 @@ theorem meet_not_bot_right : ∀ {x y : α}, x ⊓ y ≠ ⊥ → y ≠ ⊥ := by
   rw [Hc]
   simp
 
-instance [DecidableEq α] : DecidablePred (@IsBot α ι) := by
+instance [DecidableEq α] : DecidablePred (IsBot: α → Prop) := by
   rename_i ι'
   intros _
   apply ι'
 
-instance [DecidableEq α] : DecidableRel (@IsSubset α ι) := by
+instance [DecidableEq α] : DecidableRel (IsSubset: α → α → Prop) := by
   rename_i ι'
   intros _ _
   apply ι'
@@ -183,19 +180,14 @@ theorem refl : ∀ {x : α}, x ⊑ x := by
 theorem meet_min_left : ∀ {x y : α}, x ⊓ y ⊑ x := by
   intros x y
   simp [IsSubset]
-  conv =>
-    rhs
-    arg 2
-    rw [meet_commutative]
-  have := meet_idempotent x
-  simp at this
-  rw [←meet_associative, this]
+  rw [ meet_commutative y
+     , ←meet_associative
+     , meet_idempotent
+  ]
 
 instance : Std.IsPreorder α where
   le_refl x := by
-    have := meet_idempotent x
-    simp at this
-    simp [LE.le, IsSubset, this]
+    simp [LE.le, IsSubset]
     -- TODO: We need to add that a ⊓ a = a is a rule it must follow.
   le_trans := by
     intros x y z x_y y_z
@@ -204,7 +196,6 @@ instance : Std.IsPreorder α where
 @[simp]
 theorem meet_min_right : ∀ {x y : α}, x ⊓ y ⊑ y := by
   intros x y
-  simp
   rw [meet_commutative]
   apply meet_min_left
 
@@ -212,9 +203,9 @@ theorem trivial_of_top_eq_bot
   (h: (⊤: α) = ⊥)(x: α)
 : x = ⊥
 := calc x
-   _ = meet x ⊤ := by simp [meet_top]
-   _ = meet x ⊥ := by rw [h]
-   _ = ⊥        := by simp [meet_bot]
+   _ = x ⊓ ⊤ := by rw [meet_top]
+   _ = x ⊓ ⊥ := by rw [h]
+   _ = ⊥     := by rw [meet_bot]
 
 instance{α: Type}[LE α][Std.IsPreorder α]: Preorder α where
   le_refl := Std.IsPreorder.le_refl
@@ -233,8 +224,33 @@ instance: SemilatticeSup α where
   sup_le x y z := by
     intros h₁ h₂
     simp [LE.le, IsSubset] at *
+    sorry
+
+instance: SemilatticeInf α where
+  le := instBoundedLatticeLE.le
+  le_refl := Std.IsPreorder.le_refl
+  le_trans := Std.IsPreorder.le_trans
+  le_antisymm := Std.IsPartialOrder.le_antisymm
+  inf := Min.min
+  inf_le_left x y := by
+    simp [LE.le, IsSubset]
+    rw [←meet_commutative x, ←meet_associative, meet_idempotent]
+  inf_le_right x y := by
+    simp [LE.le, IsSubset]
+  le_inf x y z := by
+    intros h₁ h₂
+    simp [LE.le, IsSubset] at *
+    sorry
 
 instance: Lattice α where
+
+instance: OrderTop α where
+  le_top := by simp [LE.le, IsSubset]
+
+instance: OrderBot α where
+  bot_le x := by simp [LE.le, IsSubset, ←meet_commutative x, meet_bot]
+
+instance: BoundedOrder α where
 
 end BoundedLattice
 
@@ -254,8 +270,8 @@ def widenSeq (x : Nat → α) : Nat → α
   | .succ n => (widenSeq x n) ∇_n (x n.succ)
 end Widen
 
-class WidenLawful (α : Type)
-extends Widen α, BoundedLattice α
+class WidenLawful (α : Type) [Min α]
+extends Widen α
 where
   covering_left : ∀ (x y : α) n, x ⊑ (x ∇_n y)
   covering_right : ∀ (x y : α) n, y ⊑ (x ∇_n y)
@@ -274,8 +290,8 @@ def narrowSeq (x : Nat → α) (n : Nat) : α := match n with
   | .succ n => Narrow.narrow (narrowSeq x n) (x n.succ) n
 end Narrow
 
-class NarrowLawful (α : Type)
-extends Narrow α, BoundedLattice α
+class NarrowLawful (α : Type)[Min α]
+extends Narrow α
 where
   bounding_low : ∀  (x y : α) (n : Nat), (x ⊓ y) ⊑ (narrow x y n)
   bounding_high : ∀  (x y : α) (n : Nat), (narrow x y n) ⊑ x
@@ -292,6 +308,6 @@ where
   assign : α → Fin nb_var → IExpr nb_var → α
 export Domain (guard assign)
 
-instance (α : Type) [BEq α][ι: Domain α] : DecidablePred (· = (bot: α)) := ι.dec_bot
+instance (α : Type) [BEq α][ι: Domain α] : DecidablePred (· = (⊥ : α)) := ι.dec_bot
 
 end Lustrean

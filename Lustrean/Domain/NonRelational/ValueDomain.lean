@@ -20,7 +20,7 @@ export ValueDomain (nil)
 namespace ValueDomain
 variable {α : Type} [BEq α][ι: ValueDomain α]
 
-instance: DecidablePred (· = (bot: α)) := ι.dec_bot
+instance: DecidablePred (· = (⊥: α)) := ι.dec_bot
 
 -- backward operations :
 -- backward_op x y r = (x', y') where

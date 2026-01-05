@@ -8,7 +8,8 @@ namespace Lustrean
   non-relational abstract domain of `Set C`.
 -/
 inductive NonRelational (α : Type) [BEq α][ValueDomain α]: Nat → Type where
-| non_rel {n: Nat}(env : { env : Vector α (n+1) // ∀ i : Fin (n+1), env.get i ≠ ⊥ }) : NonRelational α (n+1)
+-- NOTE↓: Formulate the property in simp-normal form
+| non_rel {n: Nat}(env : { env : Vector α (n+1) // ∀ i : Fin (n+1), ¬ env[i.val] = ⊥ }) : NonRelational α (n+1)
 | bot {n: Nat}: NonRelational α n
 
 namespace NonRelational
@@ -34,7 +35,7 @@ def coalesce (env : Vector α n) : NonRelational α n :=
   match n with
   | 0 => .bot
   | m+1 =>
-    if H: ∀ (i: Fin (m+1)), env.get i ≠ ⊥ then
+    if H: ∀ (i: Fin (m+1)), env[i] ≠ ⊥ then
       .non_rel ⟨env, H⟩
     else
       .bot
@@ -90,17 +91,17 @@ theorem join_neq_bot : ∀ (x y : { env : Fin n → α // ∀ i, env i ≠ ⊥})
   apply H
 
 def join : NonRelational α n := match x, y with
-  | .non_rel ⟨x, H⟩, .non_rel ⟨y, _⟩ =>
-    .non_rel <| .mk (Vector.ofFn fun i => x.get i ⊔ y.get i) <| (by
-      intros i
-      simp only [Vector.get_of_fn_fin, ne_eq, BoundedLattice.join_eq_bot_iff_bot, not_and]
-      intro
-      exfalso
-      apply H
-      assumption)
+  | .non_rel ⟨x, x_prop⟩, .non_rel ⟨y, y_prop⟩ =>
+    .non_rel <| .mk (Vector.ofFn fun i => x[i] ⊔ y[i]) <| (by
+      simp only [Fin.getElem_fin, Vector.getElem_ofFn]
+      intros i H
+      have := @BoundedLattice.join_eq_bot_iff_bot _ _ x[i] y[i]
+      simp [H] at this
+      apply x_prop i
+      grind)
   | .bot, z | z, .bot => z
 
-def meet : NonRelational α n := map2Nil x y fun x y => Vector.ofFn fun i => x.get i ⊓ y.get i
+def meet : NonRelational α n := map2Nil x y fun x y => Vector.ofFn fun i => x[i] ⊓ y[i]
 end ops
 
 def top : NonRelational α n :=
@@ -110,8 +111,8 @@ def top : NonRelational α n :=
     match n with
     | 0 => .bot
     | m+1 =>
-      .non_rel ⟨Vector.replicate _ ⊤, by simp only [Vector.get_mk_vector_fin, ne_eq, h,
-        not_false_eq_true, implies_true]⟩
+      .non_rel ⟨Vector.replicate _ ⊤, by
+        simp [Vector.getElem_replicate, h]⟩
 
 end NonRelational
 end Lustrean

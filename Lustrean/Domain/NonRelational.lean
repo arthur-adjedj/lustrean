@@ -81,7 +81,7 @@ instance : Domain (NonRelational α n) where
   nb_var := n
   dec_bot x := match h: x with
   | .non_rel _ => isFalse (by simp)
-  | .bot       => isTrue  (by simp)
+  | .bot       => isTrue  (by simp [Bot.bot])
 
   assign := assign
   guard := guard

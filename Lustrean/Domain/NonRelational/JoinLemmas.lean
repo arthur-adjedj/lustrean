@@ -22,7 +22,6 @@ theorem join_absorption : join x (meet x y) = x := by
   split <;> simp [join]
   · ext
     simp
-    rfl
   · rfl
   all_goals simp [join]
 

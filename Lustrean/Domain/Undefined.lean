@@ -111,7 +111,9 @@ instance : WidenLawful (Undefined α) where
     let ⟨x, b⟩ := x
     let ⟨y, b'⟩ := y
     unfold BoundedLattice.IsSubset
-    simp [Widen.widen, widen, meet]
+    simp only [Widen.widen, widen, Min.min, Meet.meet]
+    simp only [meet]
+    simp only [mk.injEq, Bool.eq_self_and, Bool.or_eq_true]
     constructor
     · apply WidenLawful.covering_left
     · intros ; left ; assumption
@@ -120,7 +122,9 @@ instance : WidenLawful (Undefined α) where
     let ⟨x, b⟩ := x
     let ⟨y, b'⟩ := y
     unfold BoundedLattice.IsSubset
-    simp [Widen.widen, widen, meet]
+    simp only [Widen.widen, widen, Min.min, Meet.meet]
+    simp only [meet]
+    simp only [mk.injEq, Bool.eq_self_and, Bool.or_eq_true]
     constructor
     · apply WidenLawful.covering_right
     · intros ; right ; assumption
@@ -131,7 +135,9 @@ instance : NarrowLawful (Undefined α) where
     let ⟨x, b⟩ := x
     let ⟨y, b'⟩ := y
     unfold BoundedLattice.IsSubset
-    simp [Narrow.narrow, narrow, meet]
+    simp [Narrow.narrow, narrow, Min.min, Meet.meet]
+    simp only [meet]
+    simp
     rw [← ι.meet_associative]
     apply NarrowLawful.bounding_low
   bounding_high := by
@@ -139,7 +145,9 @@ instance : NarrowLawful (Undefined α) where
     let ⟨x, b⟩ := x
     let ⟨y, b'⟩ := y
     unfold BoundedLattice.IsSubset
-    simp [Narrow.narrow, narrow, meet]
+    simp [Narrow.narrow, narrow, Min.min, Meet.meet]
+    simp only [meet]
+    simp
     constructor
     · apply NarrowLawful.bounding_high
     · intros ; assumption
@@ -159,7 +167,7 @@ instance : ValueDomain (Undefined α) where
   dec_bot := by
     have := ι.dec_bot
     rintro ⟨x,nil?⟩
-    simp [Undefined.bot, Lustrean.bot]
+    simp [Undefined.bot, Bot.bot]
     infer_instance
 
   bounding_low := NarrowLawful.bounding_low
