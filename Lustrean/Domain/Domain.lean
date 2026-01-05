@@ -171,7 +171,7 @@ theorem refl : ∀ {x : α}, x ⊑ x := by
   intros x
   have h := meet_idempotent x
   simp at h
-  simp [IsSubset, h]
+  simp [IsSubset]
 
 @[simp]
 theorem meet_min_left : ∀ {x y : α}, x ⊓ y ⊑ x := by

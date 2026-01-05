@@ -53,7 +53,7 @@ theorem meet_associative : meet (meet x y) z = meet x (meet y z) := by
   | bot => simp
   | non_rel z' =>
   obtain ⟨z, z_prop⟩ := z'
-  simp only [meet, map2Nil, Fin.getElem_fin, ne_eq]
+  simp only [meet, map2Nil, Fin.getElem_fin]
   if h : ∀ i : Fin (n+1), ¬ x[i.val] ⊓ y[i.val] ⊓ z[i.val] = ⊥ then
     have h_xy: ∀ i : Fin (n+1), ¬ x[i.val] ⊓ y[i.val] = ⊥ := by
       intros i h'
@@ -74,7 +74,7 @@ theorem meet_associative : meet (meet x y) z = meet x (meet y z) := by
       if h_yz: ∀ i : Fin (n+1), ¬ y[i.val] ⊓ z[i.val] = ⊥ then
         simp [h_xy, h_yz]
       else
-        simp [h_xy, h_yz, h]
+        simp [h_xy, h_yz]
         simp at h_yz
         obtain ⟨e, P⟩ := h_yz
         exists e

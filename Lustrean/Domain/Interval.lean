@@ -70,7 +70,7 @@ instance: LinearOrder IntLow where
   le_refl := Le_refl
   le_trans := @Le_trans
   le_antisymm := by
-    rintro x y xy yx <;>
+    rintro x y xy yx
     rcases xy <;> rcases yx <;> simp only [int.injEq]
     apply Int.le_antisymm <;> simp [*]
   le_total := by
@@ -253,7 +253,7 @@ theorem Le_trans : ∀ {h₁ h₂ h₃ : IntHigh},
   Le h₁ h₂ → Le h₂ h₃ → Le h₁ h₃ :=
 by
   intros h₁ h₂ h₃ hyp hyp'
-  cases hyp <;> (try constructor) <;>
+  cases hyp <;>
   cases hyp' <;> try constructor
   apply Int.le_trans <;> assumption
 
@@ -1009,7 +1009,7 @@ theorem covering_left : ∀ (n : Nat),
 by
   intros n
   rcases x with _ | ⟨l', h', hle'⟩ <;>
-  simp only [BoundedLattice.IsSubset, Min.min, Meet.meet, meet, widen] <;>
+  simp only [BoundedLattice.IsSubset, Min.min, Meet.meet, meet, widen]
   -- case minf =>
   --   by_cases h : n ≤ 10 <;> simp [h, join] <;>
   --   simp

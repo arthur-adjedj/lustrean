@@ -39,8 +39,6 @@ instance : NarrowLawful (NonRelational α n) where
   bounding_high := by
     intros x y n
     cases x <;> cases y <;> simp [Narrow.narrow, NonRelational.narrow, map2Nil, coalesce]
-    ; (try apply BoundedLattice.bot_min)
-    ; (try apply BoundedLattice.refl)
     rename_i x y
     split
     case isFalse => apply BoundedLattice.bot_min
