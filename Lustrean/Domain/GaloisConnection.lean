@@ -37,22 +37,22 @@ namespace GaloisConnection
 /-- A function `g` is an abstraction of `f` if it the concretization
 of its outputs contain the result of concretizing its inputs. In short,
 if it is sound. -/
-abbrev IsAbstraction (gc: GaloisConnection α γ)(f: C → C) (g: A → A) :=
+abbrev IsAbstraction (_gc: GaloisConnection α γ)(f: C → C) (g: A → A) :=
   ∀ a, f (γ a) ≤ γ (g a)
 
 /-- A function `g` is an abstraction of `f` if it is a natural
 transformation (when seeing the concretization and abstraction
 functions as functors between preorders). In short, if it is
 sound and complete. -/
-abbrev IsBestAbstraction (gc: GaloisConnection α γ)(f: C → C) (g: A → A) :=
+abbrev IsBestAbstraction (_gc: GaloisConnection α γ)(f: C → C) (g: A → A) :=
   ∀ a, f (γ a) = γ (g a)
 
 @[inherit_doc IsAbstraction]
-abbrev IsBinAbstraction (gc: GaloisConnection α γ)(f: C → C → C) (g: A → A → A) :=
+abbrev IsBinAbstraction (_gc: GaloisConnection α γ)(f: C → C → C) (g: A → A → A) :=
   ∀ a a', f (γ a) (γ a') ≤ γ (g a a')
 
 @[inherit_doc IsBestAbstraction]
-abbrev IsBestBinAbstraction(gc: GaloisConnection α γ) (f: C → C → C) (g: A → A → A) :=
+abbrev IsBestBinAbstraction(_gc: GaloisConnection α γ) (f: C → C → C) (g: A → A → A) :=
   ∀ a a', f (γ a) (γ a') = γ (g a a')
 
 end GaloisConnection
