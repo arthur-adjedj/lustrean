@@ -21,23 +21,35 @@ def VarRef.upcast {n m m' : Nat} (h : m ≤ m') : VarRef n m → VarRef n m'
   | .input_var k => .input_var k
   | .bound_var k => .bound_var (k.castLE h)
 
+mutual
 inductive Expr (n m : Nat) where
   | interval (lb : &LowerBound) (up : &UpperBound)
   | var (k : &(VarRef n m))
   | mon_op (op : MonOp) (e : &(Expr n m))
   | bin_op (op : Reify.BinOp) (left right : &(Expr n m))
-  | cmp_op (op : CmpOp) (left right : &(Expr n m))
-  | ite (cond : &(Expr n m)) (tb : &(Expr n m)) (eb : &(Expr n m))
+  | ite (cond : &(BoolExpr n m)) (tb : &(Expr n m)) (eb : &(Expr n m))
   deriving Repr, Inhabited
 
-variable {n m m' : Nat} (h : m ≤ m') in
+inductive BoolExpr (n m : Nat) where
+  | cmp_op (op : CmpOp) (left right : &(Expr n m))
+  | bin_op (op : BoolBinOp) (left right : &(BoolExpr n m))
+  deriving Repr, Inhabited
+end
+
+mutual
+variable {n m m' : Nat} (h : m ≤ m')
+
 def Expr.upcast : Expr n m → Expr n m'
   | .interval lb up => .interval lb up
   | .var ⟨v, ref⟩ => .var ⟨v.upcast h, ref⟩
   | .mon_op op ⟨e, ref⟩ => .mon_op op ⟨e.upcast, ref⟩
   | .bin_op op ⟨e₁, ref₁⟩ ⟨e₂, ref₂⟩ => .bin_op op ⟨e₁.upcast, ref₁⟩ ⟨e₂.upcast, ref₂⟩
-  | .cmp_op op ⟨l, ref_l⟩ ⟨r, ref_r⟩ => .cmp_op op ⟨l.upcast, ref_l⟩ ⟨r.upcast, ref_r⟩
   | .ite ⟨cond, ref_c⟩ ⟨e₁, ref₁⟩ ⟨e₂, ref₂⟩ => .ite ⟨cond.upcast, ref_c⟩ ⟨e₁.upcast, ref₁⟩ ⟨e₂.upcast, ref₂⟩
+
+def BoolExpr.upcast : BoolExpr n m → BoolExpr n m'
+  | .cmp_op op ⟨l, ref_l⟩ ⟨r, ref_r⟩ => .cmp_op op ⟨l.upcast, ref_l⟩ ⟨r.upcast, ref_r⟩
+  | .bin_op op ⟨l, ref_l⟩ ⟨r, ref_r⟩ => .bin_op op ⟨l.upcast, ref_l⟩ ⟨r.upcast, ref_r⟩
+end
 
 /-- A local variable in a node, that is, a variable that is only available in the local scope.
     This can be either an input variable, or a locally bound variable.  -/
@@ -50,15 +62,21 @@ structure BoundVar (n m : Nat) extends Var where
   value : &(Expr n m)
   deriving Repr, Inhabited
 
-variable {n m : Nat} (input_vars : Vector Var n) (bound_vars : Vector (BoundVar n m) m) in
+mutual
+variable {n m : Nat} (input_vars : Vector Var n) (bound_vars : Vector (BoundVar n m) m)
+
 def Expr.toString : Expr n m → String
   | .interval lb up => s!"[{lb}, {up}]"
   | .var ⟨.input_var k, _⟩ => input_vars[k].name.toString
   | .var ⟨.bound_var k, _⟩ => bound_vars[k].name.toString
   | .mon_op op ⟨e, _⟩ => s!"({op} {e.toString})"
-  | .cmp_op op ⟨l, _⟩ ⟨r, _⟩
   | .bin_op op ⟨l, _⟩ ⟨r, _⟩ => s!"({l.toString} {op} {r.toString})"
   | .ite ⟨cond, _⟩ ⟨tb, _⟩ ⟨eb, _⟩ => s!"(if {cond.toString} then {tb.toString} else {eb.toString})"
+
+def BoolExpr.toString : BoolExpr n m → String
+  | .cmp_op op ⟨left, _⟩ ⟨right, _⟩
+  | .bin_op op ⟨left, _⟩ ⟨right, _⟩ => s!"({left.toString} {op} {right.toString})"
+end
 
 structure Node where
   name : Name
@@ -67,8 +85,8 @@ structure Node where
   input_vars : Vector Var n
   bound_vars : Vector (BoundVar n m) m
   output_vars : Array &(VarRef n m)
-  guards : Array &(Expr n m)
-  asserts : Array &(Expr n m)
+  guards : Array &(BoolExpr n m)
+  asserts : Array &(BoolExpr n m)
   deriving Repr, Inhabited
 
 namespace Node
@@ -99,13 +117,13 @@ def formatOutputVars (nod : Node) (output_vars : Array &(VarRef n m)) : Format :
   if output_vars.size = 0 then "" else
   " = " ++ joinSep (output_vars.map (nod[·.value]!.name) |>.toList) ","
 
-def formatGuards (guards : Array &(Expr n m)) : Format :=
+def formatGuards (guards : Array &(BoolExpr n m)) : Format :=
   if guards.size = 0 then "" else
-  Std.Format.indentD <| "guard" ++ Std.Format.indentD (joinSep (guards.map (Expr.toString input_vars bound_vars ∘ WithRef.value) |>.toList) Format.line)
+  Std.Format.indentD <| "guard" ++ Std.Format.indentD (joinSep (guards.map (BoolExpr.toString input_vars bound_vars ∘ WithRef.value) |>.toList) Format.line)
 
-def formatAsserts (asserts : Array &(Expr n m)) : Format :=
+def formatAsserts (asserts : Array &(BoolExpr n m)) : Format :=
   if asserts.size = 0 then "" else
-  Std.Format.indentD <| "assert" ++ Std.Format.indentD (joinSep (asserts.map (Expr.toString input_vars bound_vars ∘ WithRef.value) |>.toList) Format.line)
+  Std.Format.indentD <| "assert" ++ Std.Format.indentD (joinSep (asserts.map (BoolExpr.toString input_vars bound_vars ∘ WithRef.value) |>.toList) Format.line)
 
 instance : ToFormat Node where
   format n :=
@@ -117,7 +135,11 @@ instance : ToFormat Node where
     (formatAsserts n.input_vars n.bound_vars n.asserts)
 end
 
-variable {n m : Nat} (local_vars : HashMap Name (VarRef n m)) in
+section
+variable {n m : Nat}
+variable (local_vars : HashMap Name (VarRef n m))
+
+  mutual
 partial def elabExpr (e : &Inline.Expr) : CoreM &(Expr n m) :=
   e.mapM fun
     | .interval lb up => return .interval lb up
@@ -131,15 +153,24 @@ partial def elabExpr (e : &Inline.Expr) : CoreM &(Expr n m) :=
       let left ← elabExpr left
       let right ← elabExpr right
       return .bin_op op left right
+    | .ite cond tb eb => do
+      let cond ← elabBoolexpr cond
+      let tb ← elabExpr tb
+      let eb ← elabExpr eb
+      return .ite cond tb eb
+
+partial def elabBoolexpr (b : &Inline.BoolExpr) : CoreM &(BoolExpr n m) :=
+  b.mapM fun
     | .cmp_op op left right => do
       let left ← elabExpr left
       let right ← elabExpr right
       return .cmp_op op left right
-    | .ite cond tb eb => do
-      let cond ← elabExpr cond
-      let tb ← elabExpr tb
-      let eb ← elabExpr eb
-      return .ite cond tb eb
+    | .bin_op op left right => do
+      let left ← elabBoolexpr left
+      let right ← elabBoolexpr right
+      return .bin_op op left right
+end
+end
 
 def elabNode (nod : &Inline.Node) : CoreM (&Node) :=
   nod.mapM fun nod =>
@@ -163,8 +194,8 @@ def elabNode (nod : &Inline.Node) : CoreM (&Node) :=
   let output_vars ← nod.output_vars.mapM (m := CoreM) fun var : &Name => do
     let some i := env.get? var | throwErrorAt var.ref "unbound variable"
     return ⟨i, var.ref⟩
-  let guards ← nod.guards.mapM <| elabExpr env
-  let asserts ← nod.asserts.mapM <| elabExpr env
+  let guards ← nod.guards.mapM <| elabBoolexpr env
+  let asserts ← nod.asserts.mapM <| elabBoolexpr env
   return { name := nod.name, n, m, input_vars, bound_vars, guards, asserts, output_vars }
 
 def elabLustre (nodes : Array (&Inline.Node)) : CoreM (Array (&Node)) :=

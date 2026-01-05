@@ -145,6 +145,21 @@ instance : ToString CmpOp where
   toString := CmpOp.toString
 end CmpOp
 
+inductive BoolBinOp where
+  | and
+  | or
+  deriving Repr, Inhabited
+
+namespace BoolBinOp
+protected def toString : BoolBinOp → String
+  | and => "∧"
+  | or => "∨"
+
+instance : ToString BoolBinOp where
+  toString := BoolBinOp.toString
+
+end BoolBinOp
+
 namespace Reify
 inductive BinOp where
   | add
@@ -152,8 +167,6 @@ inductive BinOp where
   | mul
   | fby
   | arr
-  | and
-  | or
   deriving Repr, Inhabited
 
 namespace BinOp
@@ -163,34 +176,47 @@ protected def toString : BinOp → String
   | .mul => "*"
   | .fby => "fby"
   | .arr => "->"
-  | and => "∧"
-  | or => "∨"
 
 instance : ToString BinOp where
   toString := BinOp.toString
 end BinOp
-inductive Expr : Type where
+
+mutual
+inductive Expr where
   | interval (lb : &LowerBound) (up : &UpperBound)
   | var (name : &Name)
   | mon_op (op : MonOp) (e : &Expr)
   | bin_op (op : BinOp) (left right : &Expr)
   | node (name : &Name) (args : Array (&Expr))
-  | ite (cond : &Expr) (tb : &Expr) (eb : &Expr)
-  | cmp_op (op : CmpOp) (left right : &Expr)
+  | ite (cond : &BoolExpr) (tb : &Expr) (eb : &Expr)
   deriving Repr, Inhabited
 
+inductive BoolExpr where
+  | cmp_op (op : CmpOp) (left right : &Expr)
+  | bin_op (op : BoolBinOp) (left right : &BoolExpr)
+  deriving Repr, Inhabited
+end
+
+mutual
 partial def Expr.toString : Expr → String
   | .interval {value := .nat n,..} {value := .nat k,..} => if n = k then s!"{n}" else s!"[{n},{k}]"
   | .interval lb up => s!"[{lb},{up}]"
-  | .var v => v.value.toString
+  | .var v => toString v.value
   | .mon_op op e => s!"{op.toString} {Expr.toString e}"
   | .bin_op op e₁ e₂ => s!"{Expr.toString e₁} {op.toString} {Expr.toString e₂}"
   | .node n args => s!"{n.value}({args.map (Expr.toString ∘ WithRef.value) |>.toStringNoBrackets})"
-  | .ite cond tb eb => s!"if {Expr.toString cond} then {Expr.toString tb} else {Expr.toString eb}"
+  | .ite cond tb eb => s!"if {BoolExpr.toString cond} then {Expr.toString tb} else {Expr.toString eb}"
+
+partial def BoolExpr.toString : BoolExpr → String
   | .cmp_op op left right => s!"{Expr.toString left.value} {op.toString} {Expr.toString right.value}"
+  | .bin_op op left right => s!"{BoolExpr.toString left.value} {op.toString} {BoolExpr.toString right.value}"
+end
 
 instance : ToString Expr where
   toString := Expr.toString
+
+instance : ToString BoolExpr where
+  toString := BoolExpr.toString
 
 structure Variable where
   name : &Name
@@ -206,8 +232,8 @@ structure Node where
   input_vars : Array Variable
   bound_vars : Array BoundVars
   output_vars : Array (&Name)
-  guards : Array (&Expr)
-  asserts : Array (&Expr)
+  guards : Array (&BoolExpr)
+  asserts : Array (&BoolExpr)
 deriving Repr, Inhabited
 
 section
@@ -227,11 +253,11 @@ def formatOutputVars (output_vars : Array (&Name)) : Format :=
   if output_vars.size = 0 then "" else
   " = " ++ joinSep (output_vars |>.toList) ","
 
-def formatGuards (guards : Array (&Expr)) : Format :=
+def formatGuards (guards : Array (&BoolExpr)) : Format :=
   if guards.size = 0 then "" else
   Std.Format.indentD <| "guard" ++ Std.Format.indentD (joinSep (guards |>.toList) Format.line)
 
-def formatAsserts (asserts : Array &Expr) : Format :=
+def formatAsserts (asserts : Array (&BoolExpr)) : Format :=
   if asserts.size = 0 then "" else
   Std.Format.indentD <| "assert" ++ Std.Format.indentD (joinSep (asserts |>.toList) Format.line)
 
@@ -246,7 +272,7 @@ instance : ToFormat Node where
 end
 
 mutual
-partial def elabExpr (s : TSyntax `lustre_expr) : CoreM &Expr :=
+partial def elabExpr (s : TSyntax `lustre_expr ) : CoreM (&Expr) :=
   WithRef.withRef s do
   withTraceNode `Lustrean.Elab.Reify (msg := fun e => return m!"{exceptEmoji e} elabExpr\n{s}\n⇒\n{e.toOption.map toString}") do
     match s with
@@ -298,7 +324,7 @@ partial def elabExpr (s : TSyntax `lustre_expr) : CoreM &Expr :=
     | _ =>
       throwErrorAt s m!"{repr s}"
 
-partial def elabBoolExpr (s : TSyntax `lustre_assertion) : CoreM (&Expr) :=
+partial def elabBoolExpr (s : TSyntax `lustre_assertion) : CoreM (&BoolExpr) :=
   WithRef.withRef s do
   withTraceNode `Lustrean.Elab.Reify (msg := fun e => return m!"{exceptEmoji e} elabBoolExpr\n{s}\n⇒\n{e.toOption.map toString}") do
   match s with

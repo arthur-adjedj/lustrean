@@ -18,16 +18,6 @@ instance : ToString IntOp where
   toString := IntOp.toString
 end IntOp
 
--- TODO: Consider normalizing to `Ord`
-inductive CompareOp : Type where
-| eq : CompareOp
-| neq : CompareOp
-| le : CompareOp
-| lt : CompareOp
-| ge : CompareOp
-| gt : CompareOp
-deriving Repr, Inhabited
-
 -- n : number of variable
 inductive IExpr (n : Nat) : Type where
 | nil : IExpr n
@@ -35,15 +25,6 @@ inductive IExpr (n : Nat) : Type where
 | rand : Option Int → Option Int → IExpr n
 | neg : IExpr n → IExpr n
 | binop : IExpr n → IntOp → IExpr n → IExpr n
-deriving Repr, Inhabited
-
--- no negated expression. it must be eliminated by simplification
-inductive BExpr (n : Nat) : Type where
-| random : BExpr n
-| const : Bool → BExpr n
-| compare : IExpr n → CompareOp → IExpr n → BExpr n
-| and : BExpr n → BExpr n → BExpr n
-| or : BExpr n → BExpr n → BExpr n
 deriving Repr, Inhabited
 
 namespace IExpr
@@ -71,6 +52,16 @@ protected def toString : IExpr n → String
 instance : ToString (IExpr n) where
   toString := IExpr.toString
 end IExpr
+
+-- TODO: Consider normalizing to `Ord`
+inductive CompareOp : Type where
+| eq : CompareOp
+| neq : CompareOp
+| le : CompareOp
+| lt : CompareOp
+| ge : CompareOp
+| gt : CompareOp
+deriving Repr, Inhabited
 
 def CompareOp.toProp{α: Type}[LT α][LE α](ord: CompareOp)(x y: α): Prop :=
   match ord with
@@ -102,7 +93,14 @@ instance : ToString CompareOp where
   toString := CompareOp.toString
 end CompareOp
 
-
+-- no negated expression. it must be eliminated by simplification
+inductive BExpr (n : Nat) : Type where
+| random : BExpr n
+| const : Bool → BExpr n
+| compare : IExpr n → CompareOp → IExpr n → BExpr n
+| and : BExpr n → BExpr n → BExpr n
+| or : BExpr n → BExpr n → BExpr n
+deriving Repr, Inhabited
 
 namespace BExpr
 variable {n : Nat}
