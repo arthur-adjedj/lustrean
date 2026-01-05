@@ -22,13 +22,21 @@ def _root_.Lustrean.Elaboration.Normalize.SimpleExpr.to_cfg_expr : SimpleExpr n 
       | .add => .iadd
       | .mul => .imul
       | .sub => .isub
+      | .or => .ior l r
+      | .and => .iand l r
     .binop l.to_cfg_expr op r.to_cfg_expr
+  | .cmp_op op l r =>
+    let op := match op with
+      | .eq => .eq
+      | .lt => .lt
+      | .leq => .le
+    .compare l.to_cfg_expr op r.to_cfg_expr
   | .var .step => .var <| .mk 0 <| by omega
   | .var (.input_var k) => .var <| .mk (1+k) <| by omega
   | .var (.bound_var k) => .var <| .mk (1+n+k) <| by omega
   | .var (.old_bound_var k) => .var <| .mk (1+n+m+k) <| by omega
 
-def _root_.Lustrean.Elaboration.Normalize.BoolExpr.to_cfg_expr : BoolExpr n m → BExpr (1 + n + m + m)
+def _root_.Lustrean.Elaboration.Normalize.BoolExpr.to_cfg_expr : Expr n m → BExpr (1 + n + m + m)
   | .cmp_op op l r =>
     let op := match op with
       | .eq => .eq
