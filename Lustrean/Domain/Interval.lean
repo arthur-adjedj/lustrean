@@ -21,6 +21,15 @@ inductive Le : IntLow → IntLow → Prop where
 instance : LE IntLow where
   le := Le
 
+@[simp, local grind .]
+theorem Le.leq_iff n m : (int n).Le (int m) ↔ n ≤ m := by
+  constructor
+  · intros h; cases h; assumption;
+  · apply Le.leq
+
+@[simp, local grind .]
+theorem Le.le_iff n m: int n ≤ int m ↔ n ≤ m := by simp only [LE.le, Le.leq_iff]
+
 theorem Le_refl : ∀ (l : IntLow), Le l l :=
 by
   intros l
@@ -66,7 +75,7 @@ instance (n m : IntLow) : Decidable (n ≤ m) := by
   simp only [LE.le]
   infer_instance
 
-instance: LinearOrder IntLow where
+instance: Std.IsLinearOrder IntLow where
   le_refl := Le_refl
   le_trans := @Le_trans
   le_antisymm := by
@@ -76,7 +85,6 @@ instance: LinearOrder IntLow where
   le_total := by
     rintro (_ | ⟨x⟩) (_ | ⟨y⟩) <;>
     dsimp only [LE.le] <;> grind [Le]
-  toDecidableLE := inferInstance
 
 def add (n m : IntLow) : IntLow :=
   match n, m with
@@ -121,6 +129,15 @@ theorem minf_min : ∀ (n : IntLow),
 by
   intro n; cases n <;> simp [min]
 
+theorem min_def (n m : IntLow): n ⊓ m = if n ≤ m then n else m := by
+  dsimp [Min.min]
+  fun_cases (n.min m) with
+  | case3 n m => grind
+  | case1 =>
+    have: minf ≤ m := by simp [LE.le, Le.minf m]
+    simp [*]
+  | case2 => simp; rintro (_ | _); rfl
+
 theorem min_comm : ∀ (n m : IntLow),
   min n m = min m n :=
 by
@@ -164,6 +181,15 @@ by
   intro n
   cases n <;> simp [max]
 
+theorem max_def (n m: IntLow): n ⊔ m = if n ≤ m then m else n := by
+  dsimp [Max.max]
+  fun_cases (n.max m) with
+  | case1 n m => grind [max]
+  | case2 =>
+    simp; rintro (_| _)
+  | case3 => simp; constructor
+  | case4 => simp
+
 theorem max_comm : ∀ (n m : IntLow),
   max n m = max m n :=
 by
@@ -192,8 +218,7 @@ by
 theorem Le_max_right : ∀ l₁ l₂ : IntLow, l₂ ≤ (max l₁ l₂) :=
 by
   intros l₁ l₂
-  cases l₁ <;> cases l₂ <;> simp [max] <;> constructor
-  apply Int.le_max_right
+  cases l₁ <;> cases l₂ <;> simp [max]; constructor
 
 theorem max_eq_left : ∀ {l₁ l₂ : IntLow},
   Le l₂ l₁ → l₁.max l₂ = l₁ :=
@@ -212,6 +237,15 @@ instance : DecidableEq IntLow := by
   intros x y
   cases x <;> cases y <;> simp <;>
   exact inferInstance
+
+theorem join_is_lub
+: ∀ (x y z: IntLow), x = x ⊓ z → y = y ⊓ z → x ⊔ y = x ⊔ y ⊓ z
+:= by grind only
+
+theorem meet_is_glb
+: ∀ (x y z: IntLow), z = z ⊓ x → z = z ⊓ y → z = z ⊓ x ⊓ y
+:= by grind only
+
 end IntLow
 
 -- int or +∞
@@ -232,6 +266,15 @@ inductive Le : IntHigh → IntHigh → Prop where
 
 instance : LE IntHigh where
   le := Le
+
+@[simp, local grind .]
+theorem Le.leq_iff n m : (int n).Le (int m) ↔ n ≤ m := by
+  constructor
+  · intros h; cases h; assumption;
+  · apply Le.leq
+
+@[simp, local grind .]
+theorem Le.le_iff n m: int n ≤ int m ↔ n ≤ m := by simp only [LE.le, Le.leq_iff]
 
 @[simp]
 theorem Le_refl : ∀ (l : IntHigh), Le l l :=
@@ -278,7 +321,7 @@ instance (n m : IntHigh) : Decidable (Le n m) := by
 instance (n m : IntHigh) : Decidable (n ≤ m) := by
   simp only [LE.le]; infer_instance
 
-instance: LinearOrder IntHigh where
+instance: Std.IsLinearOrder IntHigh where
   le_refl := Le_refl
   le_trans := @Le_trans
   le_antisymm := by
@@ -288,8 +331,6 @@ instance: LinearOrder IntHigh where
   le_total := by
     rintro (_ | ⟨x⟩) (_ | ⟨y⟩) <;>
     dsimp only [LE.le] <;> grind [Le]
-  toDecidableLE := inferInstance
-
 
 def add (n m : IntHigh) : IntHigh :=
   match n, m with
@@ -334,6 +375,12 @@ theorem pinf_max : ∀ (n : IntHigh),
 by
   intro n; cases n <;> simp [max]
 
+theorem max_def (n m:IntHigh): n ⊔ m = if n ≤ m then m else n := by
+  dsimp [Max.max]
+  match n, m with
+  | .pinf, e  => simp only [max, right_eq_ite_iff]; rintro (_ | _); rfl
+  | .int e, .pinf => simp [max]; constructor
+  | .int n', .int m' => grind [max]
 
 theorem max_comm : ∀ (n m : IntHigh),
   max n m = max m n :=
@@ -371,6 +418,14 @@ by
   intro n
   cases n <;> simp [min]
 
+theorem min_def (n m : IntHigh): n ⊓ m = if n ≤ m then n else m := by
+  dsimp [Min.min]
+  fun_cases (n.min m) with
+  | case1 n m => grind
+  | case2 => simp; constructor
+  | case3 => simp; rintro (_ | _)
+  | case4 => simp
+
 @[simp]
 theorem min_refl : ∀ (n : IntHigh),
   min n n = n :=
@@ -406,8 +461,7 @@ by
 theorem Le_min_right : ∀ (h₁ h₂ : IntHigh), Le (min h₁ h₂) h₂ :=
 by
   intros h₁ h₂
-  cases h₁ <;> cases h₂ <;> simp [min] <;> constructor
-  apply Int.min_le_right
+  cases h₁ <;> cases h₂ <;> simp [min]; constructor
 
 theorem min_eq_left : ∀ {h₁ h₂ : IntHigh},
   Le h₁ h₂ → h₁.min h₂ = h₁ :=
@@ -426,6 +480,15 @@ instance : DecidableEq IntHigh := by
   intros x y
   cases x <;> cases y <;> simp <;>
   exact inferInstance
+
+theorem join_is_lub
+: ∀ (x y z: IntHigh), x = x ⊓ z → y = y ⊓ z → x ⊔ y = x ⊔ y ⊓ z
+:= by grind only
+
+theorem meet_is_glb
+: ∀ (x y z: IntHigh), z = z ⊓ x → z = z ⊓ y → z = z ⊓ x ⊓ y
+:= by grind only
+
 end IntHigh
 
 inductive HLe : IntLow → IntHigh → Prop where
@@ -627,6 +690,17 @@ theorem neg_rev_hle : ∀ (l : IntLow) (h : IntHigh),
   cases hyp <;> try constructor
   apply Int.neg_le_neg
   assumption
+
+theorem hle_le_trans {nₗ mₗ: IntLow} {nₕ mₕ: IntHigh}
+: nₗ ≤ mₗ → mₗ ≤∘ mₕ → mₕ ≤ nₕ → nₗ ≤∘ nₕ
+:= by
+  rcases nₗ with nₗ | _; case minf => intros; constructor
+  rcases nₕ with nₕ | _; case pinf => intros; constructor
+  match mₗ, mₕ with
+  | .int mₗ, .int mₕ => grind only [IntLow.Le.le_iff, hle_int, IntHigh.Le.le_iff]
+  | .minf,   .int mₕ => rintro (_ | _)
+  | .int mₗ, .pinf   => rintro _ _ (_ | _)
+  | .minf,   .pinf   => rintro (_ | _)
 end HLe
 
 -- Parameterized by the list of constants
@@ -636,6 +710,11 @@ inductive Interval (constants : List Int) where
   | empty : Interval constants
   | interval (low : IntLow) (high : IntHigh) : low ≤∘ high → Interval constants
   deriving Repr, Inhabited, DecidableEq
+
+@[grind]
+instance(cts: List Int): Bot (Interval cts) where bot := .empty
+instance(cts: List Int): EmptyCollection (Interval cts) where emptyCollection := .empty
+instance(cts: List Int): Top (Interval cts) where top := .interval .minf .pinf (by constructor)
 
 namespace Interval
 variable {constants : List Int}
@@ -682,6 +761,9 @@ def join : Interval constants := match x, y with
 | .interval l₁ h₁ o₁, .interval l₂ h₂ o₂ =>
   .interval (min l₁ l₂) (max h₁ h₂) <| by apply HLe.min_max_monotone <;> assumption
 
+instance: Max (Interval constants) where
+  max := join
+
 def meet : Interval constants := match x, y with
 | .empty, _ | _, .empty => .empty
 | .interval l₁ h₁ _, .interval l₂ h₂ _ =>
@@ -689,20 +771,26 @@ def meet : Interval constants := match x, y with
   then .interval (max l₁ l₂) (min h₁ h₂) h
   else .empty
 
-theorem join_commutative : join x y = join y x :=
+instance: Min (Interval constants) where
+  min := meet
+
+theorem join_commutative : x ⊔ y = y ⊔ x :=
 by
+  dsimp [Max.max]
   cases x <;> cases y <;> simp [join]
   apply And.intro
   · apply IntLow.min_comm
   · apply IntHigh.max_comm
 
-theorem join_associative : join (join x y) z = join x (join y z) :=
+theorem join_associative : (x ⊔ y) ⊔ z = x ⊔ (y ⊔ z) :=
 by
+  dsimp [Max.max]
   cases x <;> cases y <;> cases z <;> dsimp [join]
   simp [min, max, IntLow.min_assoc, IntHigh.max_assoc]
 
-theorem join_absorption : join x (meet x y) = x :=
+theorem join_absorption : x ⊔ (x ⊓ y) = x :=
 by
+  dsimp [Max.max, Min.min]
   cases x <;> cases y <;> dsimp [join, meet]
   rename_i l₁ h₁ hyp₁ l₂ h₂ hyp₂
   by_cases h : max l₁ l₂ ≤∘ min h₁ h₂
@@ -711,17 +799,20 @@ by
     simp [min, max, IntLow.min_max_absorb, IntHigh.max_min_absorb]
   · rw [dif_neg h]
 
-theorem join_bot : join x bot = x :=
+theorem join_bot : x ⊔ ⊥ = x :=
 by
+  dsimp [Max.max, Bot.bot]
   cases x <;> dsimp [bot, join]
 
-theorem join_top : join x top = top :=
+theorem join_top : x ⊔ ⊤ = ⊤ :=
 by
-  cases x <;>
-  simp [join, top, min, max, IntLow.min_minf, IntHigh.max_pinf]
+  dsimp [Max.max, Top.top]
+  cases x <;> dsimp [join]
+  simp [min, max, IntLow.min_minf, IntHigh.max_pinf]
 
-theorem meet_commutative : meet x y = meet y x :=
+theorem meet_commutative : x ⊓ y = y ⊓ x :=
 by
+  dsimp [Min.min]
   cases x <;> cases y <;> simp [meet]
   split <;> split <;> try dsimp
   · simp [min, max, IntLow.max_comm, IntHigh.min_comm]
@@ -733,8 +824,9 @@ by
     solve | exact (hyp₁ hyp₂) | exact (hyp₂ hyp₁)
 
 theorem meet_associative :
-  meet (meet x y) z = meet x (meet y z) :=
+  (x ⊓ y) ⊓ z = x ⊓ (y ⊓ z) :=
 by
+  dsimp [Min.min]
   cases x <;> cases y <;> cases z <;> simp [meet]
   · rename_i l₁ h₁ hyp₁ l₂ h₂ hyp₂
     by_cases h : max l₁ l₂ ≤∘ min h₁ h₂
@@ -764,8 +856,9 @@ by
         apply H
       · rw [dif_neg h']
 
-theorem meet_absorption : meet x (join x y) = x :=
+theorem meet_absorption : x ⊓ (x ⊔ y) = x :=
 by
+  dsimp [Min.min, Max.max]
   cases x <;> cases y <;> dsimp [join, meet]
   · rename_i l₁ h₁ hyp₁
     rw [dif_pos] <;> simp [max, min, IntLow.max_refl, IntHigh.min_refl]
@@ -774,18 +867,70 @@ by
     simp [min, max, IntLow.max_min_absorb, IntHigh.min_max_absorb]
     rw [dif_pos hyp₁]
 
-theorem meet_bot : meet x bot = bot :=
+theorem meet_bot : x ⊓ ⊥ = ⊥ :=
 by
+  dsimp [Min.min, Bot.bot]
   cases x <;> dsimp [meet, bot]
 
-theorem meet_top : meet x top = x :=
+theorem meet_top : x ⊓ ⊤ = x :=
 by
-  cases x <;> simp [meet, top, max, min]
+  dsimp [Min.min]
+  cases x <;> simp [meet, max, min]
   rename_i h
   rw [dif_pos h]
 
-theorem non_trivial : (top : Interval constants) ≠ bot := by
-  simp [top, bot]
+theorem non_trivial : (⊤ : Interval constants) ≠ ⊥ := by
+  simp only [ne_eq, reduceCtorEq, not_false_eq_true]
+
+@[grind =]
+theorem empty_is_bot : Interval.empty (constants := constants) = ⊥ := rfl
+
+theorem join_is_lub
+: ∀ (x y z : Interval constants), x = x ⊓ z → y = y ⊓ z → x ⊔ y = (x ⊔ y) ⊓ z
+:= by
+  rintro (_ | ⟨xₗ,xₕ,hx⟩)
+  case empty => grind [meet_commutative, meet_bot, join_commutative, join_bot]
+  rintro (_ | ⟨yₗ,yₕ,hy⟩)
+  case empty => grind [meet_commutative, meet_bot, join_commutative, join_bot]
+  rintro (_ | ⟨zₗ,zₕ,zy⟩)
+  case empty => grind [meet_commutative, meet_bot, join_commutative, join_bot]
+  dsimp [Min.min, Max.max]
+  dsimp only [meet, join]
+  intro xz
+  split at xz; case isFalse => simp only [reduceCtorEq] at xz
+  rename_i hx
+  intros yz
+  split at yz; case isFalse => simp only [reduceCtorEq] at yz
+  rename_i hy
+  simp only [interval.injEq] at xz yz
+  grind [IntLow.max_def, IntHigh.min_def, IntLow.min_def, IntHigh.max_def]
+
+
+theorem meet_is_glb
+: ∀ (x y z : Interval constants), z = z ⊓ x → z = z ⊓ y → z = z ⊓ (x ⊓ y)
+:= by
+  rintro (_ | ⟨xₗ,xₕ,hx⟩)
+  case empty => grind [meet_commutative, meet_bot]
+  rintro (_ | ⟨yₗ,yₕ,hy⟩)
+  case empty => grind [meet_commutative, meet_bot]
+  rintro (_ | ⟨zₗ,zₕ,zy⟩)
+  case empty => grind [meet_commutative, meet_bot]
+  dsimp [Min.min]
+  dsimp only [meet]
+  intro xz
+  split at xz; case isFalse => simp only [reduceCtorEq] at xz
+  rename_i hx
+  intros yz
+  split at yz; case isFalse => simp only [reduceCtorEq] at yz
+  rename_i hy
+  simp only [interval.injEq] at xz yz
+  have cond: xₗ ⊔ yₗ ≤∘ xₕ ⊓ yₕ  := by
+    -- Basically, we prove this by putting `zₗ` and `zₕ` in between
+    have lhs: xₗ ⊔ yₗ ≤ zₗ := by grind [IntLow.max_def]
+    have rhs: zₕ ≤ xₕ ⊓ yₕ := by grind [IntHigh.min_def]
+    apply HLe.hle_le_trans lhs zy rhs
+  grind [IntHigh.min_def, IntLow.min_def, IntLow.max_def, IntHigh.max_def]
+
 
 instance BoundedLatticeInterval : BoundedLattice (Interval constants) where
   bot := bot
@@ -802,7 +947,8 @@ instance BoundedLatticeInterval : BoundedLattice (Interval constants) where
   meet_absorption := meet_absorption
   meet_bot := meet_bot
   meet_top := meet_top
-  -- non_trivial := non_trivial
+  join_is_lub := join_is_lub
+  meet_is_glb := meet_is_glb
 
 def splitAtZero : Interval constants × Interval constants :=
   (
@@ -1009,7 +1155,7 @@ theorem covering_left : ∀ (n : Nat),
 by
   intros n
   rcases x with _ | ⟨l', h', hle'⟩ <;>
-  simp only [BoundedLattice.IsSubset, Min.min, Meet.meet, meet, widen]
+  simp only [BoundedLattice.IsSubset, Min.min, meet, widen]
   -- case minf =>
   --   by_cases h : n ≤ 10 <;> simp [h, join] <;>
   --   simp
@@ -1063,7 +1209,7 @@ theorem covering_right : ∀ (n : Nat),
   BoundedLattice.IsSubset y (x.widen y n) :=
 by
   intros n
-  rcases x with _ | ⟨l,h,hle⟩ <;> simp [BoundedLattice.IsSubset, Min.min, Meet.meet, meet, widen] <;>
+  rcases x with _ | ⟨l,h,hle⟩ <;> simp [BoundedLattice.IsSubset, Min.min, meet, widen] <;>
   by_cases hc : n ≤ 10 <;>
   rcases y with _ | ⟨l', h', hle'⟩ <;>
   simp [hc, join]

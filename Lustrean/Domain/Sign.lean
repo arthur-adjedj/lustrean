@@ -86,7 +86,7 @@ structure Sign where mk ::
 namespace Sign
 /-- Seeing elements in `Sign` as a set, the opposite -/
 @[grind]
-def opposite(s: Sign): Sign where
+abbrev opposite(s: Sign): Sign where
   hasZero := ! s.hasZero
   hasPos  := ! s.hasPos
   hasNeg  := ! s.hasNeg
@@ -125,15 +125,22 @@ scoped notation "[≥0]" => Sign.ZeroPos
 scoped notation "[≤0]" => Sign.ZeroNeg
 end Notation
 
+instance: Bot Sign where bot := Sign.None
+instance: Top Sign where top := Sign.All
+
 def join(a b: Sign): Sign where
   hasZero := a.hasZero || b.hasZero
   hasPos  := a.hasPos  || b.hasPos
   hasNeg  := a.hasNeg  || b.hasNeg
 
+instance: Max Sign where max := join
+
 def meet(a b: Sign): Sign where
   hasZero := a.hasZero && b.hasZero
   hasPos  := a.hasPos  && b.hasPos
   hasNeg  := a.hasNeg  && b.hasNeg
+
+instance: Min Sign where min := meet
 
 def add(a b : Sign): Sign :=
   if a = .None ∨ b = .None then
@@ -243,30 +250,24 @@ def refine (op: Lustrean.CompareOp) (x y: Sign): Sign × Sign := match op with
   | .ge  => (x.refineGE y, y.refineLE x)
   | .gt  => (x.refineGT y, y.refineLT x)
 
-end Sign
-
+@[grind =]
 instance: LE Sign := .mk (·.incl · = true)
 instance: Max Sign := .mk Sign.join
 instance: Min Sign := .mk Sign.meet
 instance: Add Sign := .mk Sign.add
 instance: Mul Sign := .mk Sign.mul
-instance: Neg Sign := .mk Sign.neg
+instance: _root_.Neg Sign := .mk Sign.neg
 instance: Sub Sign := .mk Sign.sub
 instance: Div Sign := .mk Sign.div
 instance: Widen Sign  where widen  a b _ := a ⊔ b
 instance: Narrow Sign where narrow a b _ := a ⊓ b
 
 section GaloisEmbedding
-namespace Sign
 
 /-! Inclusion of Sign elements establishes a partial order -/
 
-@[grind =]
-instance instLE: LE Sign where
-  le x y := Sign.incl x y = true
-
 @[grind]
-instance instPartialOrderSign: PartialOrder Sign where
+instance: PartialOrder Sign where
   le_refl := by simp [LE.le, Sign.incl]
   le_trans := by
     intros; simp only [LE.le] at *; grind [Sign.incl]
@@ -334,64 +335,80 @@ instance ge: GaloisEmbedding abstract concrete := gc.toGaloisInsertion <| by
   · if h: hasPos then apply Or.inr; exists 1  else grind
   · if h: hasNeg then apply Or.inr; exists -1 else grind
 
-end Sign
 end GaloisEmbedding
 
 section Theorems
-namespace Sign
 
-theorem join_commutative(a b: Sign): a.join b = b.join a := by
-  have h: ∀ (a b: Sign), a.join b ≤ b.join a := by
+theorem join_commutative(a b: Sign): a ⊔ b = b ⊔ a := by
+  have h: ∀ (a b: Sign), a ⊔ b ≤ b ⊔ a := by
+    dsimp [Max.max]
     intros a b
     apply Sign.ge.u_le_u_iff.mp
     intros x
     grind [Sign.join]
   grind [Std.IsPartialOrder.le_antisymm]
 
-theorem join_associative (a b c: Sign): (a.join b).join c = a.join (b.join c) := by
+theorem join_associative (a b c: Sign): (a ⊔ b) ⊔ c = a ⊔ (b ⊔ c) := by
   apply Std.IsPartialOrder.le_antisymm
   all_goals (
     apply Sign.ge.u_le_u_iff.mp
     intros p
+    dsimp [Max.max]
     grind [Sign.join]
   )
 
-theorem meet_commutative(a b: Sign): a.meet b = b.meet a := by
-  have h: ∀ (a b: Sign), a.meet b ≤ b.meet a := by
+theorem meet_commutative(a b: Sign): a ⊓ b = b ⊓ a := by
+  have h: ∀ (a b: Sign), a ⊓ b ≤ b ⊓ a := by
     intros a b
     apply Sign.ge.u_le_u_iff.mp
     intros x
+    dsimp [Min.min]
     grind [Sign.meet]
   grind [Std.IsPartialOrder.le_antisymm]
 
-theorem meet_associative(a b c: Sign): (a.meet b).meet c = a.meet (b.meet c) := by
+theorem meet_associative(a b c: Sign): (a ⊓ b) ⊓ c = a ⊓ (b ⊓ c) := by
   apply Std.IsPartialOrder.le_antisymm
   all_goals(
     apply Sign.ge.u_le_u_iff.mp
     intros p
+    dsimp [Min.min]
     grind [Sign.meet]
   )
 
-theorem join_absorption: ∀ (x y: Sign), x.join (x.meet y) = x:= by
+theorem join_absorption: ∀ (x y: Sign), x ⊔ (x ⊓ y) = x:= by
   rintro ⟨z,p,n⟩ ⟨z',p',n'⟩
+  dsimp [Max.max, Min.min]
   grind [join, meet, mk.injEq, Bool.or_eq_left_iff_imp]
 
-theorem meet_absorption: ∀ (x y: Sign), x.meet (x.join y) = x:= by
+theorem meet_absorption: ∀ (x y: Sign), x ⊓ (x ⊔ y) = x:= by
   rintro ⟨z,p,n⟩ ⟨z',p',n'⟩
+  dsimp [Max.max, Min.min]
   grind [meet, join, mk.injEq, Bool.and_eq_left_iff_imp]
 
-end Sign
+-- theorem join_is_lub :
+theorem join_is_lub
+: ∀ (x y z : Sign), x = x ⊓ z → y = y ⊓ z → x ⊔ y = (x ⊔ y) ⊓ z
+:= by
+  rintro ⟨xn, xz, xp⟩ ⟨yn, yz, yp⟩ ⟨zn, zz, zp⟩
+  dsimp only [Min.min, Max.max, meet, join]
+  grind only [mk.injEq]
+
+theorem meet_is_glb
+: ∀ (x y z : Sign), z = z ⊓ x → z = z ⊓ y → z = z ⊓ (x ⊓ y)
+:= by
+  rintro ⟨xn, xz, xp⟩ ⟨yn, yz, yp⟩ ⟨zn, zz, zp⟩
+  dsimp only [Min.min, meet]
+  grind only [mk.injEq]
+
 end Theorems
 
 instance: BoundedLattice Sign where
-  bot := .None
-  top := .All
   join := Sign.join
   meet := Sign.meet
-  join_bot := by simp [Sign.None, Sign.join, Max.max]
-  join_top := by simp [Sign.All, Sign.None, Sign.opposite,  Sign.join, Max.max]
-  meet_bot := by simp [Sign.None, Sign.meet, Min.min]
-  meet_top := by simp [Sign.All, Sign.None, Sign.opposite, Sign.meet, Min.min]
+  join_bot := by simp [Max.max, Bot.bot, Sign.None, Sign.join]
+  join_top := by simp [Max.max, Top.top, Sign.All, Sign.None, Sign.opposite, Sign.join]
+  meet_bot := by simp [Min.min, Bot.bot, Sign.None, Sign.meet]
+  meet_top := by simp [Min.min, Top.top, Sign.All, Sign.None, Sign.opposite, Sign.meet]
   -- non_trivial := by decide
   join_commutative := Sign.join_commutative
   join_associative := Sign.join_associative
@@ -399,6 +416,8 @@ instance: BoundedLattice Sign where
   meet_associative := Sign.meet_associative
   join_absorption  := Sign.join_absorption
   meet_absorption  := Sign.meet_absorption
+  join_is_lub := Sign.join_is_lub
+  meet_is_glb := Sign.meet_is_glb
 
 instance: WidenLawful Sign where
   /- NOTE: These theorems are inlined since they depend on
@@ -452,14 +471,17 @@ instance: ValueDomain Sign where
     }
 
 section Correctness
-namespace Sign
 open Pointwise -- For operations on Sets
 
 /-!
   Note that most operators are not complete. For instance, consider the
   add function. We have `[<0] + [<0] = [<0]`.
 -/
+
+/-- info: [<0] -/
+#guard_msgs in
 #eval open Sign.Notation in [<0] + [<0]
+
 /-!
   However, in our concrete domain we can deduce something stronger. Consider
   when `-1 ∈ γ ([<0] + [<0])`, however `-1 ∉ (γ[<0] + γ[<0])`. This is because
@@ -675,5 +697,5 @@ theorem rand_correctness (l? r?: Option Int)
   simp only [ValueDomain.rand, Option.mem_def]
   grind
 
-end Sign
 end Correctness
+end Sign

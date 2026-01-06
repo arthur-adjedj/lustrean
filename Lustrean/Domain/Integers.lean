@@ -7,48 +7,68 @@ inductive Integers where
 | int : Int → Integers
 deriving DecidableEq, BEq
 
+instance: Bot (Integers) where bot := .bot
+instance: Top (Integers) where top := .top
+
 namespace Integers
 def join (x y : Integers) : Integers := match x, y with
   | n, .bot | .bot, n => n
   | .int n, .int m => if n = m then .int n else .top
   | _, _ => .top
 
+instance: Max (Integers) where max := join
+
 def meet (x y : Integers) : Integers := match x, y with
   | .top, n | n, .top => n
   | .int n, .int m => if n = m then .int n else .bot
   | _, _ => .bot
 
-instance : BoundedLattice Integers where
-  bot := .bot
-  top := .top
-  join := join
-  meet := meet
-  join_commutative := by
+instance: Min (Integers) where min := meet
+
+theorem join_commutative
+: ∀ (x y : Integers), x ⊔ y = y ⊔ x
+:= by
     intro x y
     rcases x with _ | _ | ⟨x⟩ <;>
     rcases y with _ | _ | ⟨y⟩ <;>
     simp only [join, Max.max]
     grind
-  join_associative := by
+
+theorem join_associative
+: ∀ (x y z : Integers), x ⊔ y ⊔ z = x ⊔ (y ⊔ z)
+:= by
     intro x y z
     rcases x with _ | _ | ⟨x⟩ <;>
     rcases y with _ | _ | ⟨y⟩ <;>
     rcases z with _ | _ | ⟨z⟩ <;>
     dsimp [join, Max.max] <;>
     grind
-  join_absorption := by
+
+
+theorem join_absorption
+: ∀ (x y : Integers), x ⊔ x ⊓ y = x
+:= by
     intro x y
     rcases x with _ | _ | ⟨x⟩ <;>
     rcases y with _ | _ | ⟨y⟩ <;>
     simp only [join, meet, Max.max, Min.min] <;>
     grind
-  join_bot := by
+
+theorem join_bot
+: ∀ (x : Integers), x ⊔ bot = x
+:= by
     intro x
     cases x <;> dsimp [join, Max.max, Min.min]
-  join_top := by
+
+theorem join_top
+: ∀ (x : Integers), x ⊔ top = top
+:= by
     intro x
     cases x <;> dsimp [join, Max.max, Min.min]
-  meet_commutative := by
+
+theorem meet_commutative
+: ∀ (x y : Integers), x ⊓ y = y ⊓ x
+:= by
     intro x y
     cases x <;> cases y <;> dsimp [meet, Max.max, Min.min]
     split <;> split
@@ -56,7 +76,10 @@ instance : BoundedLattice Integers where
     · next h₁ h₂ => cases h₂ h₁.symm
     · next h₁ h₂ => cases h₁ h₂.symm
     · constructor
-  meet_associative := by
+
+theorem meet_associative
+: ∀ (x y z : Integers), x ⊓ y ⊓ z = x ⊓ (y ⊓ z)
+:= by
     intro x y z
     cases x <;> cases y <;> cases z <;> dsimp [meet, Max.max, Min.min]
     <;> try (next x y =>
@@ -68,18 +91,75 @@ instance : BoundedLattice Integers where
       simp [h2]
       rw [←h2]
       simp [h1]
-  meet_absorption := by
+
+theorem meet_absorption
+: ∀ (x y : Integers), x ⊓ (x ⊔ y) = x
+:= by
     intro x y
     cases x <;> cases y <;> simp [meet, join, Max.max, Min.min]
     next x y =>
       by_cases h : (x = y) <;>
       simp [h]
-  meet_bot := by
+
+theorem meet_bot
+: ∀ (x : Integers), x ⊓ bot = bot
+:= by
     intro x
     cases x <;> dsimp [meet, Max.max, Min.min]
-  meet_top := by
+
+theorem meet_top
+: ∀ (x : Integers), x ⊓ top = x
+:= by
     intro x
     cases x <;> dsimp [meet, Max.max, Min.min]
+
+theorem join_is_lub
+: ∀ (x y z : Integers), x = x ⊓ z → y = y ⊓ z → x ⊔ y = (x ⊔ y) ⊓ z
+:= by
+  rintro (_ | _ | ⟨x⟩)
+  case bot => grind only [meet_commutative, meet_bot, join_commutative, join_bot]
+  case top => grind only [meet_commutative, meet_top, join_commutative, join_top]
+  rintro (_ | _ | ⟨y⟩)
+  case bot => grind only [meet_commutative, meet_bot, join_commutative, join_bot]
+  case top => grind only [meet_commutative, meet_top, join_commutative, join_top]
+  rintro (_ | _ | ⟨z⟩)
+  case bot => grind only [meet_commutative, meet_bot, join_commutative, join_bot]
+  case top => grind only [meet_commutative, meet_top, join_commutative, join_top]
+  dsimp [Max.max, Min.min]
+  grind only [meet, join]
+
+theorem meet_is_glb
+: ∀ (x y z : Integers), z = z ⊓ x → z = z ⊓ y → z = z ⊓ (x ⊓ y)
+:= by
+  rintro (_ | _ | ⟨x⟩)
+  case bot => grind only [meet_commutative, meet_bot]
+  case top => grind only [meet_commutative, meet_top]
+  rintro (_ | _ | ⟨y⟩)
+  case bot => grind only [meet_commutative, meet_bot]
+  case top => grind only [meet_commutative, meet_top]
+  rintro (_ | _ | ⟨z⟩)
+  case bot => grind only [meet_commutative, meet_bot]
+  case top => grind only [meet_commutative, meet_top]
+  dsimp [Min.min]
+  grind only [meet]
+
+instance : BoundedLattice Integers where
+  bot := .bot
+  top := .top
+  join := join
+  meet := meet
+  join_commutative := join_commutative
+  join_associative := join_associative
+  join_absorption := join_absorption
+  join_bot := join_bot
+  join_top := join_top
+  meet_commutative := meet_commutative
+  meet_associative := meet_associative
+  meet_absorption := meet_absorption
+  meet_bot := meet_bot
+  meet_top := meet_top
+  join_is_lub := join_is_lub
+  meet_is_glb := meet_is_glb
 
 def mapInt (x y : Integers) (f : Int → Int →  Integers) : Integers :=
   match x, y with
@@ -135,14 +215,14 @@ instance : WidenLawful Integers where
     dsimp [BoundedLattice.IsSubset, Widen.widen]
     rcases x with _ | _ | ⟨x⟩ <;>
     rcases y with _ | _ | ⟨y⟩ <;>
-    simp only [join, Min.min, Meet.meet, meet, reduceIte]
+    simp only [join, Min.min, meet, reduceIte]
     by_cases h : (x = y) <;> simp [h]
   covering_right := by
     intros x y n
     dsimp [BoundedLattice.IsSubset, Widen.widen]
     rcases x with _ | _ | ⟨x⟩ <;>
     rcases y with _ | _ | ⟨y⟩ <;>
-    simp only [join, Min.min, Meet.meet, meet, reduceIte]
+    simp only [join, Min.min, meet, reduceIte]
     by_cases h : (x = y) <;> simp [h]
 
 instance : Narrow Integers where
@@ -154,14 +234,14 @@ instance : NarrowLawful Integers where
     dsimp [BoundedLattice.IsSubset, Narrow.narrow]
     rcases x with _ | _ | ⟨x⟩ <;>
     rcases y with _ | _ | ⟨y⟩ <;>
-    simp only [Min.min, Meet.meet, meet, reduceIte]
+    simp only [Min.min, meet, reduceIte]
     grind
   bounding_high := by
     intros x y n
     dsimp [BoundedLattice.IsSubset, Narrow.narrow]
     rcases x with _ | _ | ⟨x⟩ <;>
     rcases y with _ | _ | ⟨y⟩ <;>
-    simp only [Min.min, Meet.meet, meet, reduceIte]
+    simp only [Min.min, meet, reduceIte]
     grind
 
 def compareInt (op : CompareOp) (a b : Int) : Integers × Integers :=
