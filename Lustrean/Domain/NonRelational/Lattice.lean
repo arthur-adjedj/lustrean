@@ -48,7 +48,7 @@ instance : BoundedLattice (NonRelational α n) where
       simpa only [meet_bot]
     | case3 =>
       simpa only [join_bot]
-  meet_is_gub x y z xz yz := by
+  meet_is_glb x y z xz yz := by
     rcases x with ⟨x, x_prop⟩ | _; case bot =>
       simpa only [meet_bot, bot_meet] using xz
     rename_i n
@@ -63,7 +63,7 @@ instance : BoundedLattice (NonRelational α n) where
     split at yz; case isFalse => simp only [reduceCtorEq] at yz
     rename_i hy
     simp only [non_rel.injEq, Subtype.mk.injEq, Fin.getElem_fin] at xz yz
-    have := fun (i: Fin (n+1)) => BoundedLattice.meet_is_gub (x[i.val]) (y[i.val]) z[i.val]
+    have := fun (i: Fin (n+1)) => BoundedLattice.meet_is_glb (x[i.val]) (y[i.val]) z[i.val]
       (by grind) (by grind)
     simp only [Meet.meet, meet, map2Nil, coalesce]
     have cond₁: ∀ (i : Fin (n + 1)), ¬ x[i.val] ⊓ y[i.val] = ⊥

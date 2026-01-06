@@ -26,7 +26,7 @@ class BoundedLattice (α : Type) extends Bot α, Top α, Meet α, Join α where
   meet_top : ∀ (x : α), x ⊓ top = x
   meet_bot : ∀ (x : α), x ⊓ bot = bot
   join_is_lub : ∀ (x y z : α), x = x ⊓ z → y = y ⊓ z → x ⊔ y = (x ⊔ y) ⊓ z
-  meet_is_gub : ∀ (x y z : α), z = z ⊓ x → z = z ⊓ y → z = z ⊓ (x ⊓ y)
+  meet_is_glb : ∀ (x y z : α), z = z ⊓ x → z = z ⊓ y → z = z ⊓ (x ⊓ y)
   -- With how we have defined `BoundedLattice`, we don't require that
   -- join gives the lowest upper bound. Same with meet giving the greatest
   -- lower bound. Do we want to include these restrictions?
@@ -47,7 +47,7 @@ def BoundedLattice.ofLatticeAndBoundedOrder {α: Type}[Lattice α][BoundedOrder 
   meet_bot := by simp
   meet_top := by simp
   join_is_lub := by grind [left_eq_inf, sup_le_iff]
-  meet_is_gub := by grind [left_eq_inf, le_inf_iff]
+  meet_is_glb := by grind [left_eq_inf, le_inf_iff]
 
 namespace BoundedLattice
 variable {α : Type} [ι : BoundedLattice α]
@@ -238,7 +238,7 @@ instance: SemilatticeInf α where
     simp [LE.le, IsSubset]
   le_inf x y z := by
     simp only [LE.le, IsSubset]
-    apply meet_is_gub
+    apply meet_is_glb
 
 instance: Lattice α where
 
