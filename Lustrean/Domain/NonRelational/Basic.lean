@@ -17,6 +17,8 @@ namespace NonRelational
 variable {α : Type} {n : Nat} [BEq α]
 variable [ι : ValueDomain α]
 
+instance: Bot (NonRelational α n) where bot := .bot
+
 instance : BEq (NonRelational α n) where
   beq
   | .non_rel env, .non_rel env' => env == env'
@@ -100,8 +102,10 @@ def join : NonRelational α n := match x, y with
       apply x_prop i
       grind)
   | .bot, z | z, .bot => z
+instance: Join (NonRelational α n) where join := join
 
 def meet : NonRelational α n := map2Nil x y fun x y => Vector.ofFn fun i => x[i] ⊓ y[i]
+instance: Meet (NonRelational α n) where meet := meet
 end ops
 
 def top : NonRelational α n :=
@@ -113,6 +117,8 @@ def top : NonRelational α n :=
     | m+1 =>
       .non_rel ⟨Vector.replicate _ ⊤, by
         simp [Vector.getElem_replicate, h]⟩
+
+instance: Top (NonRelational α n) where top := top
 
 end NonRelational
 end Lustrean

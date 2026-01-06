@@ -11,7 +11,8 @@ theorem _root_.Vector.ofFn_getElem_self{α: Type}{n: Nat}(v: Vector α n)
 := by ext; simp [getElem]
 
 @[simp]
-theorem meet_top : meet x top = x := by
+theorem meet_top : x ⊓ top = x := by
+  simp only [Min.min, Meet.meet]
   match x with
   | .bot => simp [meet, map2Nil]
   | .non_rel ⟨x, x_prop⟩ =>
@@ -23,23 +24,24 @@ theorem meet_top : meet x top = x := by
       simp [meet, map2Nil, coalesce, top, *]
 
 @[simp, grind =]
-theorem meet_bot : x.meet bot = bot := by
-  cases x <;> simp [meet, map2Nil]
+theorem meet_bot : x ⊓ bot = bot := by
+  cases x <;> simp [Min.min, Meet.meet, meet, map2Nil]
 
 @[grind =]
-theorem meet_commutative : meet x y = meet y x := by
+theorem meet_commutative : x ⊓ y = y ⊓ x := by
+  dsimp only [Min.min, Meet.meet]
   cases x <;> cases y <;> simp [meet, map2Nil, coalesce]
   rename_i x y
   simp [BoundedLattice.meet_commutative]
 
 @[simp, grind =]
-theorem bot_meet : bot.meet x = bot := by simp [meet_bot, meet_commutative]
+theorem bot_meet : bot ⊓ x = bot := by simp [meet_bot, meet_commutative]
 
 @[simp]
-theorem top_meet : top.meet x = x   := by simp [meet_top, meet_commutative]
+theorem top_meet : top ⊓ x = x   := by simp [meet_top, meet_commutative]
 
 set_option maxHeartbeats 1000000 in
-theorem meet_associative : meet (meet x y) z = meet x (meet y z) := by
+theorem meet_associative : (x ⊓ y) ⊓ z = x ⊓ (y ⊓ z) := by
   cases x with
   | bot => simp
   | non_rel x' =>
@@ -53,6 +55,7 @@ theorem meet_associative : meet (meet x y) z = meet x (meet y z) := by
   | bot => simp
   | non_rel z' =>
   obtain ⟨z, z_prop⟩ := z'
+  dsimp [Min.min, Meet.meet]
   simp only [meet, map2Nil, Fin.getElem_fin]
   if h : ∀ i : Fin (n+1), ¬ x[i.val] ⊓ y[i.val] ⊓ z[i.val] = ⊥ then
     have h_xy: ∀ i : Fin (n+1), ¬ x[i.val] ⊓ y[i.val] = ⊥ := by
@@ -91,7 +94,8 @@ theorem meet_associative : meet (meet x y) z = meet x (meet y z) := by
       else
         simp [h_yz]
 
-theorem meet_absorption : meet x (join x y) = x := by
+theorem meet_absorption : x  ⊓(x ⊔ y) = x := by
+  dsimp [Max.max, Min.min, Meet.meet, Join.join]
   match x, y with
   | .bot, _ =>
     simp [meet, map2Nil]
