@@ -33,49 +33,80 @@ instance : ToString (Undefined α) where
   toString := Undefined.toString
 
 def bot : Undefined α := .mk ⊥ false
+instance: Bot (Undefined α) where bot := bot
 def top : Undefined α := .mk ⊤ true
+instance: Top (Undefined α) where top := top
 def meet : Undefined α := .mk (x.val ⊓ y.val) (x.may_be_nil && y.may_be_nil)
+instance: Min (Undefined α) where min := meet
 def join : Undefined α := .mk (x.val ⊔ y.val) (x.may_be_nil || y.may_be_nil)
+instance: Max (Undefined α) where max := join
 
-theorem join_commutative : join x y = join y x := by
-  simp [join]
-  simp [BoundedLattice.join_commutative, Bool.or_comm]
+theorem join_commutative : x ⊔ y = y ⊔ x := by
+  dsimp [Max.max]; dsimp [join]
+  simp only [BoundedLattice.join_commutative, Bool.or_comm]
 
-theorem join_associative : join (join x y) z = join x (join y z) := by
-  simp [join]
+theorem join_associative : (x ⊔ y) ⊔ z = x ⊔ (y ⊔ z) := by
+  dsimp [Max.max]; dsimp [join]
   simp [Bool.or_assoc]
 
 
-theorem join_absorption : x.join (x.meet y) = x := by
-  simp [join, meet]
+theorem join_absorption : x ⊔ (x ⊓ y) = x := by
+  dsimp [Max.max, Min.min]
+  dsimp [join, meet]
   cases x ; cases y.may_be_nil <;> simp
 
-theorem join_bot : join x bot = x := by
+theorem join_bot : x ⊔ bot = x := by
+  dsimp [Max.max]
   simp [join, bot]
 
-theorem join_top : join x top = top := by
-  simp [join, top]
+theorem join_top : x ⊔ top = top := by
+  dsimp [Max.max]; dsimp [join]
+  simp [top]
 
-theorem meet_commutative : meet x y = meet y x := by
-  simp [meet]
+theorem meet_commutative : x ⊓ y = y ⊓ x := by
+  dsimp [Min.min]; dsimp [meet]
   simp [BoundedLattice.meet_commutative, Bool.and_comm]
 
-theorem meet_associative : meet (meet x y) z = meet x (meet y z) := by
-  simp [meet]
+theorem meet_associative : (x ⊓ y) ⊓ z = x ⊓ (y ⊓ z) := by
+  dsimp [Min.min]; dsimp [meet]
   simp [Bool.and_assoc]
 
-theorem meet_absorption : x.meet (x.join y) = x := by
-  simp [meet, join]
+theorem meet_absorption : x ⊓ (x ⊔ y) = x := by
+  dsimp [Min.min, Max.max]; dsimp [meet, join]
   cases x ; cases y.may_be_nil <;> simp
 
-theorem meet_top : meet x top = x := by
-  simp [meet, top]
+theorem meet_top : x ⊓ top = x := by
+  dsimp [Min.min]; dsimp [meet]
+  simp [top]
 
-theorem meet_bot : meet x bot = bot := by
+theorem meet_bot : x ⊓ bot = bot := by
+  dsimp [Min.min]
   simp [meet, bot]
 
 theorem non_trivial : Undefined.top ≠ (bot : Undefined α) := by
   simp [top, bot]
+
+theorem join_is_lub
+: ∀ (x y z : Undefined α), x = x ⊓ z → y = y ⊓ z → x ⊔ y = (x ⊔ y) ⊓ z
+:= by
+  rintro ⟨x,x?⟩ ⟨y, y?⟩ ⟨z, z?⟩
+  dsimp [Min.min, Max.max]
+  simp only [join, meet, mk.injEq]
+  rintro ⟨hx, hx?⟩ ⟨hy, hy?⟩
+  constructor
+  · apply BoundedLattice.join_is_lub <;> assumption
+  · grind only
+
+theorem meet_is_glb
+: ∀ (x y z : Undefined α), z = z ⊓ x → z = z ⊓ y → z = z ⊓ (x ⊓ y)
+:= by
+  rintro ⟨x,x?⟩ ⟨y, y?⟩ ⟨z, z?⟩
+  dsimp [Min.min]
+  simp only [ meet, mk.injEq]
+  rintro ⟨hx, hx?⟩ ⟨hy, hy?⟩
+  constructor
+  · apply BoundedLattice.meet_is_glb <;> assumption
+  · grind only
 
 instance : BoundedLattice (Undefined α) where
   bot := bot
@@ -92,6 +123,8 @@ instance : BoundedLattice (Undefined α) where
   meet_absorption := meet_absorption
   meet_top := meet_top
   meet_bot := meet_bot
+  join_is_lub := join_is_lub
+  meet_is_glb := meet_is_glb
 
 def widen (n : Nat) : Undefined α :=
   .mk (ι.widen x.val y.val n) (x.may_be_nil || y.may_be_nil)
@@ -111,7 +144,7 @@ instance : WidenLawful (Undefined α) where
     let ⟨x, b⟩ := x
     let ⟨y, b'⟩ := y
     unfold BoundedLattice.IsSubset
-    simp only [Widen.widen, widen, Min.min, Meet.meet]
+    simp only [Widen.widen, widen, Min.min]
     simp only [meet]
     simp only [mk.injEq, Bool.eq_self_and, Bool.or_eq_true]
     constructor
@@ -122,7 +155,7 @@ instance : WidenLawful (Undefined α) where
     let ⟨x, b⟩ := x
     let ⟨y, b'⟩ := y
     unfold BoundedLattice.IsSubset
-    simp only [Widen.widen, widen, Min.min, Meet.meet]
+    simp only [Widen.widen, widen, Min.min]
     simp only [meet]
     simp only [mk.injEq, Bool.eq_self_and, Bool.or_eq_true]
     constructor
@@ -135,7 +168,7 @@ instance : NarrowLawful (Undefined α) where
     let ⟨x, b⟩ := x
     let ⟨y, b'⟩ := y
     unfold BoundedLattice.IsSubset
-    simp [Narrow.narrow, narrow, Min.min, Meet.meet]
+    simp [Narrow.narrow, narrow, Min.min]
     simp only [meet]
     simp
     rw [← ι.meet_associative]
@@ -145,7 +178,7 @@ instance : NarrowLawful (Undefined α) where
     let ⟨x, b⟩ := x
     let ⟨y, b'⟩ := y
     unfold BoundedLattice.IsSubset
-    simp [Narrow.narrow, narrow, Min.min, Meet.meet]
+    simp [Narrow.narrow, narrow, Min.min]
     simp only [meet]
     simp
     constructor
