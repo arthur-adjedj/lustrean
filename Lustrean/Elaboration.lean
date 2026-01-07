@@ -11,7 +11,7 @@ import Misc.Graphviz
 
 open Lean
 open Elab (liftMacroM TermElabM)
-open Elab.Command (liftCoreM liftTermElabM CommandElabM )
+open Elab.Command (liftCoreM CommandElabM )
 
 namespace Lustrean.Elaboration
 
@@ -36,7 +36,7 @@ def elabLustre (nodes : TSyntaxArray `lustre_node) : ReaderT Options CommandElab
       let opts ← read
       match opts.dom with
       | .UndefinedInterval =>
-        let state ← liftTermElabM <| withRef ref do State.run (m := CoreM) (α := NonRelational (Undefined (Interval [])) n) cfg
+        let state ← liftCoreM <| withRef ref do State.run (m := CoreM) (α := NonRelational (Undefined (Interval [])) n) cfg
         let some env := state.node_env.back? | continue
         for ⟨var, ref⟩ in output_vars do
           let val := env.get var
