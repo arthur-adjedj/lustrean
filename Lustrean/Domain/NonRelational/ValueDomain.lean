@@ -28,6 +28,8 @@ instance: DecidablePred (· = (bot: α)) := ι.dec_bot
 -- y' = { v' ∈ y | ∃ v ∈ x, v op v' ∈ r }
 def backwardNeg (x r : α) : α := (-r) ⊓ x
 
+def backwardNot (x r : α) : α := (if r = bot then top else bot) ⊓ x
+
 def backwardAdd (x y r : α) : α × α :=
   (x ⊓ (r - y), y ⊓ (r - x))
 

@@ -58,7 +58,8 @@ inductive IExpr (n : Nat): Type where
 | nil : IExpr n
 | var : (i : Fin n) → IExpr n
 | rand : Option Int → Option Int → IExpr n
-| neg : IExpr n→ IExpr n
+| not : IExpr n → IExpr n
+| neg : IExpr n → IExpr n
 | binop : IExpr n → (op : BinOp) → IExpr n → IExpr n
 | cmpop : IExpr n → CompareOp → IExpr n → IExpr n
 deriving Repr, Inhabited
@@ -92,14 +93,12 @@ protected def toString : IExpr n → String
       | none => "∞"
     if l == r then s!"{l}" else s!"[{l}, {r}]"
   | .neg e => s!"(- {e.toString})"
+  | .not e => s!"(¬ {e.toString})"
   | .binop left op right
   | .cmpop left op right => s!"({left.toString} {op} {right.toString})"
 
 instance : ToString (IExpr n) where
   toString := IExpr.toString
-
--- TODO
-def not : IExpr n → IExpr n := id
 
 end IExpr
 
