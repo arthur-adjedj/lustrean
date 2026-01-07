@@ -177,6 +177,10 @@ partial def elabExpr (s : TSyntax `lustre_expr) : CoreM &Expr :=
   WithRef.withRef s do
   withTraceNode `Lustrean.Elab.Reify (msg := fun e => return m!"{exceptEmoji e} elabExpr\n{s}\n⇒\n{e.toOption.map toString}") do
     match s with
+    | `(lustre_expr| $n:num) =>
+      let n₁ := ⟨.nat n.getNat, n⟩
+      let n₂ := ⟨.nat n.getNat, n⟩
+      return .interval n₁ n₂
     | `(lustre_expr| [$lbs, $ups]) =>
       let lb ← match lbs with
         | `(lustre_lower_bound| -∞) => pure .minf
@@ -243,7 +247,7 @@ partial def elabExpr (s : TSyntax `lustre_expr) : CoreM &Expr :=
       let right ← elabExpr r
       return .bin_op .or left right
     | _ =>
-      throwErrorAt s m!"{repr s}"
+      throwErrorAt s m!"invalid syntax {s}"
 
 def elabNode (s : TSyntax `lustre_node) : CoreM (&Node) :=
   withTraceNode `Lustrean.Elab.Reify

@@ -218,7 +218,7 @@ where
   nb_var : Nat
   dec_bot: DecidablePred (· = bot)
   -- keep only elements satisfying the boolean expression
-  guard : α → BExpr nb_var → α
+  guard : α → IExpr nb_var → α
   assign : α → Fin nb_var → IExpr nb_var → α
 export Domain (guard assign)
 

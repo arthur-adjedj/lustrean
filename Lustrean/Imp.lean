@@ -97,6 +97,10 @@ protected def toString : IExpr n → String
 
 instance : ToString (IExpr n) where
   toString := IExpr.toString
+
+-- TODO
+def not : IExpr n → IExpr n := id
+
 end IExpr
 
 def CompareOp.toProp{α: Type}[LT α][LE α](ord: CompareOp)(x y: α): Prop :=

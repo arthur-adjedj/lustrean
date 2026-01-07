@@ -1,6 +1,5 @@
 import Lustrean
 
-
 #guard_msgs in
 lustre
   node inc(x) = o where

@@ -105,7 +105,7 @@ def elabResult (nod : Normalize.Node) : ResultM nod Unit := do
     let out_nodes := [
         { out_node := there_id,  out_inst := .skip},                   -- loop again current iteration
         { out_node := 1,  out_inst := .skip},                          -- exit program
-        { out_node := next_id + 1, out_inst := .assign step (.binop (.var step) .iadd (IExpr.const 1))} -- next iteration
+        { out_node := next_id + 1, out_inst := .assign step (.binop (.var step) .add (IExpr.const 1))} -- next iteration
     ]
     addNewPreNode out_nodes
   for _ in [0:unrollLoop] do
@@ -141,7 +141,7 @@ def elabResult (nod : Normalize.Node) : ResultM nod Unit := do
       addNewPreNode [ite_false_node]
   let next_id ← getNextId
   let out_nodes := [
-      { out_node := here_id, out_inst := .assign step (.binop (.var step) .iadd (IExpr.const 1))}, -- go to next iteration
+      { out_node := here_id, out_inst := .assign step (.binop (.var step) .add (IExpr.const 1))}, -- go to next iteration
       { out_node := there_id, out_inst := .skip},                   -- loop again current iteration
       { out_node := next_id + 1,  out_inst := .skip}             -- exit program
     ]
