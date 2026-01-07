@@ -448,12 +448,10 @@ section Correctness
 namespace Sign
 open Pointwise -- For operations on Sets
 
-/-!
+/-
   Note that most operators are not complete. For instance, consider the
   add function. We have `[<0] + [<0] = [<0]`.
--/
-#eval open Sign.Notation in [<0] + [<0]
-/-!
+
   However, in our concrete domain we can deduce something stronger. Consider
   when `-1 ∈ γ ([<0] + [<0])`, however `-1 ∉ (γ[<0] + γ[<0])`. This is because
   -1 cannot be obtained from the sum of two negative integers. Therefore,

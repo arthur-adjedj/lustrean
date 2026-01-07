@@ -41,60 +41,55 @@ def eval : IExpr n → α
     let i₁ := eval e₁
     let i₂ := eval e₂
     match op with --TODO surely this is wrong
-      | .eq  => if i₁ = i₂ then - nil else nil
-      | .neq => if i₁ = i₂ then nil else - nil
-      | .le  => if i₁ ⊑ i₂ then -nil else nil
-      | .lt  => if i₁ ⊑ i₂ ∧ i₁ ≠ i₂ then -nil else nil
-      | .ge  => if i₂ ⊑ i₁ then nil else -nil
-      | .gt  => if i₂ ⊑ i₁ ∧ i₁ ≠ i₂ then nil else -nil
+      | .eq  => if i₁ = i₂ then ⊤ else ⊥
+      | .neq => if i₁ = i₂ then ⊥ else ⊤
+      | .le  => if i₁ ⊑ i₂ then ⊤ else ⊥
+      | .lt  => if i₁ ⊑ i₂ ∧ i₁ ≠ i₂ then ⊤ else ⊥
+      | .ge  => if i₂ ⊑ i₁ then ⊤ else ⊥
+      | .gt  => if i₂ ⊑ i₁ ∧ i₁ ≠ i₂ then ⊤ else ⊥
+
 
 def assign (i : Fin n) (e : IExpr n) : NonRelational α n :=
   update x i <| eval x e
 
-  def backwardEval (e : IExpr n) (r : α) : NonRelational α n :=
-    have : DecidablePred BoundedLattice.IsBot := ι.dec_bot -- help class inference
-    match e with
-    | .nil => if ι.IsBot (r ⊓ nil)
-      then ⊥
-      else x
-    | .var i => update x i ((get x i) ⊓ r)
-    | .rand a b => if ι.IsBot (r ⊓ (ι.rand a b))
-      then ⊥
-      else x
-    | .neg e =>
-      let i := eval x e
-      let r := ι.backwardNeg i r
-      backwardEval e r
-    | .binop e₁ op e₂ =>
-      let i₁ := eval x e₁
-      let i₂ := eval x e₂
-      let (r₁, r₂) := match op with
-      | .add => ι.backwardAdd i₁ i₂ r
-      | .sub => ι.backwardSub i₁ i₂ r
-      | .mul => ι.backwardMul i₁ i₂ r
-      | .div => ι.backwardDiv i₁ i₂ r
-      | .or => (i₁ ⊔ i₂,i₁ ⊔ i₂)
-      | .and => (i₁ ⊓ i₂,i₁ ⊓ i₂)
-      backwardEval e₁ r₁ ⊓ backwardEval e₂ r₂
-    | .cmpop e₁ op e₂ =>
-      let i₁ := eval x e₁
-      let i₂ := eval x e₂
-      let (r₁, r₂) := ι.compare op i₁ i₂
-      backwardEval e₁ r₁ ⊓ backwardEval e₂ r₂
+def backwardEval (e : IExpr n) (r : α) : NonRelational α n :=
+  have : DecidablePred BoundedLattice.IsBot := ι.dec_bot -- help class inference
+  match e with
+  | .nil => if ι.IsBot (r ⊓ nil)
+    then ⊥
+    else x
+  | .var i => update x i ((get x i) ⊓ r)
+  | .rand a b => if ι.IsBot (r ⊓ (ι.rand a b))
+    then ⊥
+    else x
+  | .neg e =>
+    let i := eval x e
+    let r := ι.backwardNeg i r
+    backwardEval e r
+  | .binop e₁ op e₂ =>
+    let i₁ := eval x e₁
+    let i₂ := eval x e₂
+    let (r₁, r₂) := match op with
+    | .add => ι.backwardAdd i₁ i₂ r
+    | .sub => ι.backwardSub i₁ i₂ r
+    | .mul => ι.backwardMul i₁ i₂ r
+    | .div => ι.backwardDiv i₁ i₂ r
+    | .or => (i₁ ⊔ i₂,i₁ ⊔ i₂)
+    | .and => (i₁ ⊓ i₂,i₁ ⊓ i₂)
+    backwardEval e₁ r₁ ⊓ backwardEval e₂ r₂
+  | .cmpop e₁ op e₂ =>
+    let i₁ := eval x e₁
+    let i₂ := eval x e₂
+    let (r₁, r₂) := ι.compare op i₁ i₂
+    backwardEval e₁ r₁ ⊓ backwardEval e₂ r₂
 
-  instance : Domain (NonRelational α n) where
-    nb_var := n
-    dec_bot x := match h: x with
-    | .non_rel _ => isFalse (by simp)
-    | .bot       => isTrue  (by simp)
+instance : Domain (NonRelational α n) where
+  nb_var := n
+  dec_bot x := match h: x with
+  | .non_rel _ => isFalse (by simp)
+  | .bot       => isTrue  (by simp)
 
-    assign := assign
-    guard := (backwardEval · · ⊥)
-    -- TODO: pourquoi ça n'infère pas ??
-    covering_left := WidenLawful.covering_left
-    covering_right := WidenLawful.covering_right
-
-    bounding_low := NarrowLawful.bounding_low
-    bounding_high := NarrowLawful.bounding_high
+  assign := assign
+  guard := (backwardEval · · ⊥)
 end NonRelational
 end Lustrean
