@@ -43,12 +43,14 @@ instance (n : Nat) : OfNat UpperBound n where
 end UpperBound
 
 inductive MonOp where
+  | not
   | neg
   | «pre»
   deriving Repr, Inhabited
 
 namespace MonOp
 protected def toString : MonOp → String
+  | not => "¬"
   | neg => "-"
   | «pre» => "pre"
 
@@ -226,7 +228,7 @@ partial def elabExpr (s : TSyntax `lustre_expr) : CoreM &Expr :=
       let tb ← elabExpr tb
       let eb ← elabExpr eb
       return .ite c tb eb
-    | `(lustre_expr| $l:lustre_expr ≤ $r:lustre_expr) =>
+    | `(lustre_expr| $l:lustre_expr ≤ $r:lustre_expr) | `(lustre_expr| $r:lustre_expr ≥ $l:lustre_expr) =>
       let left ← elabExpr l
       let right ← elabExpr r
       return .cmp_op .leq left right
@@ -234,7 +236,11 @@ partial def elabExpr (s : TSyntax `lustre_expr) : CoreM &Expr :=
       let left ← elabExpr l
       let right ← elabExpr r
       return .cmp_op .eq left right
-    | `(lustre_expr| $l:lustre_expr < $r:lustre_expr) =>
+    | `(lustre_expr| $l:lustre_expr ≠ $r:lustre_expr) =>
+      let left ← elabExpr l
+      let right ← elabExpr r
+      return .mon_op .not ⟨.cmp_op .eq left right, s⟩
+    | `(lustre_expr| $l:lustre_expr < $r:lustre_expr) | `(lustre_expr| $r:lustre_expr > $l:lustre_expr) =>
       let left ← elabExpr l
       let right ← elabExpr r
       return .cmp_op .lt left right
