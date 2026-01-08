@@ -36,16 +36,19 @@ inductive Expr where
   | bin_op (op : Reify.BinOp) (left right : &Expr)
   | ite (cond : &Expr) (tb eb : &Expr)
   | cmp_op (op : CmpOp) (left right : &Expr)
+  | etrue | efalse
   deriving Repr, Inhabited
 
 partial def Expr.toString : Expr → String
-  | .interval {value := .nat n,..} {value := .nat k,..} => if n = k then s!"{n}" else s!"[{n},{k}]"
+  | .interval {value := .int n,..} {value := .int k,..} => if n = k then s!"{n}" else s!"[{n},{k}]"
   | .interval lb up => s!"[{lb},{up}]"
   | .var v => v.value.toString
   | .mon_op op e => s!"{op.toString} {Expr.toString e}"
   | .bin_op op e₁ e₂ => s!"{Expr.toString e₁} {op.toString} {Expr.toString e₂}"
   | .ite cond tb eb => s!"if {Expr.toString cond} then {Expr.toString tb} else {Expr.toString eb}"
   | .cmp_op op left right => s!"{Expr.toString left.value} {op.toString} {Expr.toString right.value}"
+  | .etrue => "true"
+  | .efalse => "false"
 
 instance : ToString Expr where
   toString := Expr.toString
@@ -62,6 +65,7 @@ def Expr.with_prefix : Expr → Expr
   | .bin_op op l r => .bin_op op (l.map (·.with_prefix)) (r.map (·.with_prefix))
   | .ite cond tb eb => .ite (cond.map (·.with_prefix)) (tb.map (·.with_prefix)) (eb.map (·.with_prefix))
   | .cmp_op op l r => .cmp_op op (l.map (·.with_prefix)) (r.map (·.with_prefix))
+  | e => e
 termination_by e => sizeOf e
 
 
@@ -163,6 +167,8 @@ partial def elabExprAux (bounds : Option (Array (&Name))) (var_name : Name) (e :
   e.mapM fun
     | .interval lb up => do_bounds <| .interval lb up
     | .var n => do_bounds <| .var n
+    | .etrue => do_bounds .etrue
+    | .efalse => do_bounds .efalse
     | .mon_op op e => do
       let e ← elabExprAux none var_name e
       do_bounds <| .mon_op op e
@@ -246,8 +252,8 @@ def elabNode (nod : &Reify.Node) : CoreM (&Node) :=
   InlineM.run nod.name nod.input_vars nod.output_vars do
         for { names, value } in nod.bound_vars do
           elabExpr env names value
-        elabGuardAssert true nod.guards |>.run
-        elabGuardAssert false nod.asserts |>.run
+        elabGuardAssert .true nod.guards |>.run
+        elabGuardAssert .false nod.asserts |>.run
 where
   elabGuardAssert (guards : Bool) (ops : Array &Reify.Expr) : CounterT InlineM Unit := do
     for b in ops do
@@ -268,4 +274,4 @@ end Inline
 end Lustrean.Elaboration
 
 initialize
-  registerTraceClass `Lustrean.Elab.Inline (inherited := true)
+  registerTraceClass `Lustrean.Elab.Inline (inherited := .true)

@@ -259,17 +259,12 @@ partial def elabSimpleExprAux {n m : Nat} (nod : NodeN n m) (e : Indicise.Expr n
 partial def elabExprAux {n m : Nat} (nod : NodeN n m) : Indicise.Expr n m → NormalizeM (AuxExpr n m)
   | .interval lb up =>
     return ⟨m, by simp, .simple (.interval lb up), nod⟩
+  | .etrue => return ⟨m, by simp, .simple <| .interval (.int 1) (.int 1), nod⟩
+  | .efalse => return ⟨m, by simp, .simple <| .interval (.int (-1)) (.int (-1)), nod⟩
   | .var ⟨.input_var v, _⟩ =>
     return ⟨m, by simp, .simple <| .var <| .input_var v, nod⟩
   | .var ⟨.bound_var v, _⟩ =>
     return ⟨m, by simp, .simple <| .var <| .bound_var v, nod⟩
-  | .mon_op .not ⟨e, _⟩ => do
-    let ⟨m', _, e, nod⟩ ← elabSimpleExprAux nod e
-    return {
-      m'
-      e := .ite (.cmp_op .eq e (.interval 0 0)) (.interval 0 0) e
-      nod := nod
-    }
   | .mon_op .neg ⟨e, _⟩ => do
     let ⟨m', _, e, nod⟩ ← elabSimpleExprAux nod e
     return {
@@ -456,4 +451,4 @@ end Normalize
 end Lustrean.Elaboration
 
 initialize
-  registerTraceClass `Lustrean.Elab.Normalize (inherited := true)
+  registerTraceClass `Lustrean.Elab.Normalize (inherited := .true)

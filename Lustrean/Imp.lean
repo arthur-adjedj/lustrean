@@ -58,7 +58,6 @@ inductive IExpr (n : Nat): Type where
 | nil : IExpr n
 | var : (i : Fin n) → IExpr n
 | rand : Option Int → Option Int → IExpr n
-| not : IExpr n → IExpr n
 | neg : IExpr n → IExpr n
 | binop : IExpr n → (op : BinOp) → IExpr n → IExpr n
 | cmpop : IExpr n → CompareOp → IExpr n → IExpr n
@@ -93,7 +92,6 @@ protected def toString : IExpr n → String
       | none => "∞"
     if l == r then s!"{l}" else s!"[{l}, {r}]"
   | .neg e => s!"(- {e.toString})"
-  | .not e => s!"(¬ {e.toString})"
   | .binop left op right
   | .cmpop left op right => s!"({left.toString} {op} {right.toString})"
 
@@ -110,27 +108,6 @@ def CompareOp.toProp{α: Type}[LT α][LE α](ord: CompareOp)(x y: α): Prop :=
   | lt  => x < y
   | ge  => x ≥ y
   | gt  => x > y
-
--- namespace BExpr
--- variable {n : Nat}
---
--- def not : BExpr n → BExpr n
-  -- | random => random
-  -- | const b => const (.not b)
-  -- | compare a op b => compare a op.not b
-  -- | and b b' => or b.not b'.not
-  -- | or b b' => and b.not b'.not
---
--- protected def toString : BExpr n → String
-  -- | .random => "?"
-  -- | .const b => toString b
-  -- | .compare left op right => s!"({left} {op} {right})"
-  -- | .and left right => s!"({left.toString} && {right.toString})"
-  -- | .or left right => s!"({left.toString} || {right.toString})"
---
--- instance : ToString (BExpr n) where
-  -- toString := BExpr.toString
--- end BExpr
 
 inductive Instruction (n : Nat) : Type where
 | skip : Instruction n
