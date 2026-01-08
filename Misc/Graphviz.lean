@@ -1,16 +1,18 @@
 import ProofWidgets.Component.HtmlDisplay
 import Lean
+
 open Lean
 open ProofWidgets.Jsx
-
 open Elab.Command (CommandElabM liftCoreM)
 open ProofWidgets ProofWidgets.HtmlEval ProofWidgets.HtmlCommand
 open Lean.Server.RpcEncodable (rpcEncode)
 
-def mkHtmlDotStx (ref : Syntax) (toDot : Std.Format) : Elab.Command.CommandElabM Unit := do
+def mkHtmlDotStx (ref : Syntax) (toDot : Std.Format) : Elab.Command.CommandElabM Unit := withRef ref do
   let url := "https://quickchart.io/graphviz?graph=" ++ (toDot.pretty /-|>.replace '\n' "" |>.replace ' ' ""-/)
-  logInfo s!"url : {url}"
-  let html ← `(term|<embed type="text/html" src={$(Syntax.mkStrLit url)}> </embed>)
+  let embed := Lean.mkIdent (← `(ident|embed)).getId.eraseMacroScopes
+  let type := Lean.mkIdent (← `(ident|type)).getId.eraseMacroScopes
+  let src := Lean.mkIdent (← `(ident|src)).getId.eraseMacroScopes
+  let html ← ``(<$embed:ident $type:ident ="text/html" $src:ident = {$(Syntax.mkStrLit url)}> </$embed>)
   let htX ← Elab.Command.liftTermElabM <| evalCommandMHtml <| ← ``(ProofWidgets.HtmlEval.eval $html)
   let ht ← htX
   liftCoreM <| Widget.savePanelWidgetInfo
