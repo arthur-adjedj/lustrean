@@ -28,6 +28,7 @@ inductive Expr (n m : Nat) where
   | bin_op (op : Reify.BinOp) (left right : &(Expr n m))
   | cmp_op (op : CmpOp) (left right : &(Expr n m))
   | ite (cond : &(Expr n m)) (tb : &(Expr n m)) (eb : &(Expr n m))
+  | etrue | efalse
   deriving Repr, Inhabited
 
 variable {n m m' : Nat} (h : m ≤ m') in
@@ -38,6 +39,8 @@ def Expr.upcast : Expr n m → Expr n m'
   | .bin_op op ⟨e₁, ref₁⟩ ⟨e₂, ref₂⟩ => .bin_op op ⟨e₁.upcast, ref₁⟩ ⟨e₂.upcast, ref₂⟩
   | .cmp_op op ⟨l, ref_l⟩ ⟨r, ref_r⟩ => .cmp_op op ⟨l.upcast, ref_l⟩ ⟨r.upcast, ref_r⟩
   | .ite ⟨cond, ref_c⟩ ⟨e₁, ref₁⟩ ⟨e₂, ref₂⟩ => .ite ⟨cond.upcast, ref_c⟩ ⟨e₁.upcast, ref₁⟩ ⟨e₂.upcast, ref₂⟩
+  | .etrue => .etrue
+  | .efalse => .efalse
 
 /-- A local variable in a node, that is, a variable that is only available in the local scope.
     This can be either an input variable, or a locally bound variable.  -/
@@ -59,6 +62,8 @@ def Expr.toString : Expr n m → String
   | .cmp_op op ⟨l, _⟩ ⟨r, _⟩
   | .bin_op op ⟨l, _⟩ ⟨r, _⟩ => s!"({l.toString} {op} {r.toString})"
   | .ite ⟨cond, _⟩ ⟨tb, _⟩ ⟨eb, _⟩ => s!"(if {cond.toString} then {tb.toString} else {eb.toString})"
+  | .etrue => "true"
+  | .efalse => "false"
 
 structure Node where
   name : Name
@@ -121,6 +126,8 @@ variable {n m : Nat} (local_vars : HashMap Name (VarRef n m)) in
 partial def elabExpr (e : &Inline.Expr) : CoreM &(Expr n m) :=
   e.mapM fun
     | .interval lb up => return .interval lb up
+    | .etrue => return .etrue
+    | .efalse => return .efalse
     | .var ⟨name, ref⟩ => do
       let some k := local_vars.get? name | throwErrorAt ref "unbound variable"
       return .var ⟨k, ref⟩
@@ -174,4 +181,4 @@ end Indicise
 end Lustrean.Elaboration
 
 initialize
-  registerTraceClass `Lustrean.Elab.Indicise (inherited := true)
+  registerTraceClass `Lustrean.Elab.Indicise (inherited := .true)

@@ -27,7 +27,6 @@ def eval : IExpr n → α
   | .var i => get x i
   | .rand a b => ι.rand a b
   | .neg e => - eval e
-  | .not e => if e matches .rand (some (-1)) (some (-1)) then 1 else -1
   | .binop e₁ op e₂ =>
     let i₁ := eval e₁
     let i₂ := eval e₂
@@ -66,10 +65,6 @@ def backwardEval (e : IExpr n) (r : α) : NonRelational α n :=
   | .neg e =>
     let i := eval x e
     let r := ι.backwardNeg i r
-    backwardEval e r
-  | .not e =>
-    let i := eval x e
-    let r := ι.backwardNot i r
     backwardEval e r
   | .binop e₁ op e₂ =>
     let i₁ := eval x e₁

@@ -12,10 +12,10 @@ def _root_.Lustrean.Elaboration.Normalize.SimpleExpr.to_cfg_expr : SimpleExpr n 
   | .interval lb ub =>
     let lb := match lb with
       | .minf => none
-      | .nat n => some n
+      | .int n => some n
     let ub := match ub with
       | .pinf => none
-      | .nat n => some n
+      | .int n => some n
     .rand lb ub
   | .bin_op op l r =>
     let op := match op with
@@ -95,7 +95,7 @@ def elabResult (nod : Normalize.Node) : ResultM nod Unit := do
         let next_id ← getNextId
         let guard_nodes := [
           { out_node := next_id + 1,  out_inst := .guard cond.to_cfg_expr},
-          { out_node := next_id + 2,  out_inst := .guard cond.to_cfg_expr.not}]
+          { out_node := next_id + 2,  out_inst := .guard cond.to_cfg_expr.neg}]
         let ite_true_node  := { out_node := next_id+3,  out_inst := .assign (bound_var k) e₁.to_cfg_expr}
         let ite_false_node := { out_node := next_id+3,  out_inst := .assign (bound_var k) e₂.to_cfg_expr}
         addNewPreNode guard_nodes
@@ -133,7 +133,7 @@ def elabResult (nod : Normalize.Node) : ResultM nod Unit := do
       let next_id ← getNextId
       let guard_nodes := [
         { out_node := next_id + 1,  out_inst := .guard cond.to_cfg_expr},
-        { out_node := next_id + 2,  out_inst := .guard cond.to_cfg_expr.not}]
+        { out_node := next_id + 2,  out_inst := .guard cond.to_cfg_expr.neg}]
       let ite_true_node  := { out_node := next_id+3,  out_inst := .assign (bound_var k) e₁.to_cfg_expr}
       let ite_false_node := { out_node := next_id+3,  out_inst := .assign (bound_var k) e₂.to_cfg_expr}
       addNewPreNode guard_nodes
@@ -193,4 +193,4 @@ def elabLustre (a : Array &Normalize.Node) : CoreM (Array &Node) :=
 end Lustrean.Elaboration.Compile
 
 initialize
-  registerTraceClass `Lustrean.Elab.Compile (inherited := true)
+  registerTraceClass `Lustrean.Elab.Compile (inherited := .true)
