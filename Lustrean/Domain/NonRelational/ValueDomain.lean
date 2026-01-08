@@ -3,7 +3,7 @@ import Lustrean.Domain.Domain
 namespace Lustrean
 class ValueDomain (α : Type) [BEq α]
 extends Add α, Neg α, Mul α, Sub α, Div α, BoundedLattice α,
-  ToString α, WidenLawful α, NarrowLawful α
+  ToString α, WidenLawful α, NarrowLawful α, OfNat α 1
 where
   -- interval [a, b]
   rand : Option Int → Option Int → α
