@@ -174,15 +174,62 @@ instance : ToFormat Node where
     (formatAsserts n.asserts)
 end
 
+inductive Ty where
+  | int : Ty
+  | bool : Ty
 
-partial def elabExpr (s : TSyntax `lustre_expr) : CoreM &Expr :=
+namespace Ty
+protected def toString : Ty → String
+  | .int => "ℕ"
+  | .bool => "Bool"
+
+instance : ToString Ty where
+  toString := Ty.toString
+
+abbrev VarsEnv := Std.HashMap Name Ty
+
+namespace VarsEnv
+protected def toString (env : VarsEnv) : String :=
+  Std.HashMap.toList env |>
+  List.map (fun (name,ty) => s!"{name}:{ty}") |>
+  String.intercalate ", "
+
+instance : ToString VarsEnv where
+  toString := VarsEnv.toString
+
+abbrev NodeEnv := Std.HashMap Name (Array Ty × Array Ty)
+
+instance : ToString (Array Ty) where
+  toString := fun lTy =>
+    lTy.map Ty.toString |>
+    Array.toList |>
+    String.intercalate ", "
+
+namespace NodeEnv
+protected def toString (env : NodeEnv) : String :=
+  env.toList |>
+  List.map (fun (name, in_types, out_types) => 
+    s!"{name}({in_types}) -> ({out_types})"
+  )
+  |> String.intercalate "\n"
+
+instance : ToString NodeEnv where
+  toString := NodeEnv.toString
+
+instance : ToString (Expr × VarsEnv × Option Ty) where
+  toString := fun (e,vars,ty?) =>
+    match ty? with
+    | some ty => s!"{e}:{ty} where {vars}"
+    | none => s!"{e} where {vars}"
+
+partial def elabExpr (s : TSyntax `lustre_expr) (nodeEnv : NodeEnv) (varEnv : VarsEnv) (expectedType? : Option Ty) : CoreM (&Expr × VarsEnv × (Option Ty)) :=
   WithRef.withRef s do
   withTraceNode `Lustrean.Elab.Reify (msg := fun e => return m!"{exceptEmoji e} elabExpr\n{s}\n⇒\n{e.toOption.map toString}") do
     match s with
     | `(lustre_expr| $n:num) =>
       let n₁ := ⟨.nat n.getNat, n⟩
       let n₂ := ⟨.nat n.getNat, n⟩
-      return .interval n₁ n₂
+      return (Expr.interval n₁ n₂, varEnv, some Ty.int)
     | `(lustre_expr| [$lbs, $ups]) =>
       let lb ← match lbs with
         | `(lustre_lower_bound| -∞) => pure .minf
