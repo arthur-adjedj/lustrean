@@ -1,5 +1,5 @@
 import Lustrean.Elaboration.Reify
-import Misc
+import Misc.Counter
 
 open Lean Meta Elab
 open Std (HashMap)

@@ -1,4 +1,5 @@
 import Lustrean.Domain.NonRelational.Basic
+import Misc.Vector
 
 namespace Lustrean.NonRelational
 variable {α : Type} {n : Nat} [BEq α]

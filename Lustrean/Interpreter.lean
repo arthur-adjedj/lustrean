@@ -1,6 +1,5 @@
-import Lustrean.Imp
-import Lustrean.Domain
 import Misc.Lean
+import Lustrean.Domain.Domain
 
 namespace Lustrean
 structure Node (nb_var nb_arcs : Nat) : Type where

@@ -7,6 +7,8 @@ import Lustrean.Elaboration.Options
 import Lustrean.Interpreter
 import Lustrean.Domain.Interval
 import Lustrean.Domain.Sign
+import Lustrean.Domain.NonRelational
+import Lustrean.Domain.Undefined
 
 open Lean
 open Elab (liftMacroM)

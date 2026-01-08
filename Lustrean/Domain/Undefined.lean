@@ -1,4 +1,4 @@
-import Lustrean.Domain.NonRelational
+import Lustrean.Domain.NonRelational.ValueDomain
 
 namespace Lustrean
 structure Undefined (α : Type) : Type where

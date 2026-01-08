@@ -1,8 +1,8 @@
-import Lustrean.Domain.NonRelational
 import Lustrean.Domain.GaloisConnection
 import Mathlib.Order.Defs.PartialOrder
 import Mathlib.Data.Set.Defs
 import Mathlib.Algebra.Group.Pointwise.Set.Basic
+import Lustrean.Domain.NonRelational.ValueDomain
 
 namespace Lustrean
 

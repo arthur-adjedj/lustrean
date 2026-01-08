@@ -6,7 +6,6 @@ import Lustrean.Domain.NonRelational.MeetLemmas
 import Lustrean.Domain.NonRelational.Lattice
 import Lustrean.Domain.NonRelational.Narrow
 import Lustrean.Domain.NonRelational.Widen
-import Misc
 
 namespace Lustrean
 

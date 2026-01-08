@@ -1,6 +1,5 @@
 import Lustrean.Elaboration.Reify
 import Lustrean.Elaboration.Inline
-import Misc
 
 open Lean
 open Meta Elab

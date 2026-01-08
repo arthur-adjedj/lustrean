@@ -1,7 +1,6 @@
 import Lustrean.Elaboration.Reify
 import Lustrean.Elaboration.Inline
 import Lustrean.Elaboration.Indicise
-import Misc
 
 open Lean
 open Meta Elab
