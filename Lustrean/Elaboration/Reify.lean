@@ -240,6 +240,10 @@ instance : ToString (Expr × VarsEnv × Option Ty) where
     | some ty => s!"{e}:{ty} where {vars}"
     | none => s!"{e} where {vars}"
 
+def typeCheck (ty : Option Ty) (expected : Ty) : CoreM Unit := do
+      if ty != some expected then
+        throwError m!"application type mismatch, expected{indentD (toMessageData expected)}\nbut has{indentD (toMessageData ty)}"
+
 partial def elabExpr (s : TSyntax `lustre_expr) (nodeEnv : NodeEnv) (varEnv : VarsEnv) (expectedType? : Option Ty) : CoreM (&Expr × VarsEnv × (Option Ty)) :=
   WithRef.withRef s do
   withTraceNode `Lustrean.Elab.Reify (msg := fun e => return m!"{exceptEmoji e} elabExpr\n{s}\n⇒\n{e.toOption.map toString}") do
@@ -267,10 +271,8 @@ partial def elabExpr (s : TSyntax `lustre_expr) (nodeEnv : NodeEnv) (varEnv : Va
       let (left, lenv, lty) ← elabExpr l nodeEnv varEnv (some Ty.int)
       let (right, renv, rty) ← elabExpr r nodeEnv varEnv (some Ty.int)
 
-      if lty != some Ty.int then
-        throwError m!"application type mismatch, expected{indentD (toMessageData Ty.int)}\nbut has{indentD (toMessageData lty)}"
-      if rty != some Ty.int then
-        throwError m!"application type mismatch, expected{indentD (toMessageData Ty.int)}\nbut has{indentD (toMessageData rty)}"
+      typeCheck lty Ty.int
+      typeCheck rty Ty.int
 
       let env <- lenv.merge renv
 
