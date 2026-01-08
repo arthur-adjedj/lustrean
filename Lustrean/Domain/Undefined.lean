@@ -152,6 +152,7 @@ def compare (op : CompareOp) (x y : Undefined α) :
   (.mk x' x.may_be_nil, .mk y' y.may_be_nil)
 
 instance : ValueDomain (Undefined α) where
+  ofNat := .mk 1 false
   rand a b := .mk (ι.rand a b) false
   nil := .mk ⊥ true
   compare := compare

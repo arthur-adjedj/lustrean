@@ -190,6 +190,7 @@ def compare (op : CompareOp) (x y : Integers) : Integers × Integers :=
   | _, _, _ => (x, y)
 
 instance IntegersValueDomain : ValueDomain Integers where
+  ofNat := .int 1
   nil := .bot
   rand a b := match a, b with
     | .some a, .some b => if a = b then .int a else .top

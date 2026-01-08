@@ -416,6 +416,7 @@ instance: NarrowLawful Sign where
     grind [Sign.meet]
 
 instance: ValueDomain Sign where
+  ofNat := {hasPos := true}
   nil := .All
 
   compare op x y := Sign.refine op x y
