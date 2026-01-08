@@ -178,6 +178,7 @@ end
 inductive Ty where
   | int : Ty
   | bool : Ty
+deriving BEq
 
 namespace Ty
 protected def toString : Ty → String
@@ -187,16 +188,32 @@ protected def toString : Ty → String
 instance : ToString Ty where
   toString := Ty.toString
 
-abbrev VarsEnv := Std.HashMap Name Ty
+structure VarsEnv where
+  map : Std.HashMap Name Ty
+  deriving Inhabited
 
 namespace VarsEnv
+def merge (e1 e2 : VarsEnv) : CoreM VarsEnv := do
+  let mergedMap ← e2.map.foldM (init := e1.map) fun acc name ty2 => do
+    match acc.get? name with
+    | some ty1 =>
+      if ty1 == ty2 then
+        return acc -- They match, no action needed
+      else
+        throwError m!"Type conflict for variable '{name}': '{ty1}' vs '{ty2}'"
+    | none =>
+      return acc.insert name ty2
+  return { map := mergedMap }
+
 protected def toString (env : VarsEnv) : String :=
-  Std.HashMap.toList env |>
+  env.map.toList |>
   List.map (fun (name,ty) => s!"{name}:{ty}") |>
   String.intercalate ", "
 
 instance : ToString VarsEnv where
   toString := VarsEnv.toString
+
+end VarsEnv
 
 abbrev NodeEnv := Std.HashMap Name (Array Ty × Array Ty)
 
@@ -247,9 +264,17 @@ partial def elabExpr (s : TSyntax `lustre_expr) (nodeEnv : NodeEnv) (varEnv : Va
       return (Expr.interval ⟨lb, lbs⟩ ⟨up, ups⟩,varEnv,some Ty.int)
     | `(lustre_expr| $v:ident) => return (Expr.var ⟨v.getId, v⟩,varEnv,none)
     | `(lustre_expr| $l + $r) =>
-      let left ← elabExpr l
-      let right ← elabExpr r
-      return .bin_op .add left right
+      let (left, lenv, lty) ← elabExpr l nodeEnv varEnv (some Ty.int)
+      let (right, renv, rty) ← elabExpr r nodeEnv varEnv (some Ty.int)
+
+      if lty != some Ty.int then
+        throwError m!"application type mismatch, expected{indentD (toMessageData Ty.int)}\nbut has{indentD (toMessageData lty)}"
+      if rty != some Ty.int then
+        throwError m!"application type mismatch, expected{indentD (toMessageData Ty.int)}\nbut has{indentD (toMessageData rty)}"
+
+      let env <- lenv.merge renv
+
+      return (Expr.bin_op .add left right, env, some Ty.int)
     | `(lustre_expr| $l fby $r) =>
       let left ← elabExpr l
       let right ← elabExpr r
