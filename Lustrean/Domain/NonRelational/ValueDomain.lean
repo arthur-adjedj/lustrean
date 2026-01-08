@@ -3,7 +3,7 @@ import Lustrean.Domain.Domain
 namespace Lustrean
 class ValueDomain (α : Type) [BEq α]
 extends Add α, Neg α, Mul α, Sub α, Div α, BoundedLattice α,
-  ToString α, WidenLawful α, NarrowLawful α
+  ToString α, WidenLawful α, NarrowLawful α, OfNat α 1
 where
   -- interval [a, b]
   rand : Option Int → Option Int → α
@@ -28,7 +28,8 @@ instance: DecidablePred (· = (bot: α)) := ι.dec_bot
 -- y' = { v' ∈ y | ∃ v ∈ x, v op v' ∈ r }
 def backwardNeg (x r : α) : α := (-r) ⊓ x
 
-def backwardNot (x r : α) : α := (if r = bot then top else bot) ⊓ x
+-- since true is defined as 1, false as -1, neg does the job
+def backwardNot (x r : α) : α := backwardNeg x r
 
 def backwardAdd (x y r : α) : α × α :=
   (x ⊓ (r - y), y ⊓ (r - x))

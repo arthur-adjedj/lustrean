@@ -328,7 +328,7 @@ def checkAssert (s : State α cfg) : m (State α cfg)
     match arc.inst with
     | .assert b =>
       let old_env := s.getArcEnv ⟨i,cfg.Harcs ▸ this⟩
-      let new_env := ι.guard old_env b.not
+      let new_env := ι.guard old_env b.neg
       if new_env ≠ ⊥
       then
         Lean.logErrorAt? arc.ref? m!"assert failed under {new_env}"

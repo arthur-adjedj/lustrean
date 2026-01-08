@@ -9,48 +9,46 @@ namespace Lustrean.Elaboration
 -- Reify phase.  This is the bridge between the parser and the elaborator.
 
 inductive LowerBound where
-  | nat (n : Nat)
+  | int (n : Int)
   | minf
   deriving Repr, Inhabited
 
 namespace LowerBound
 protected def toString : LowerBound → String
-  | .nat n => toString n
+  | int n => toString n
   | .minf => "-∞"
 
 instance : ToString LowerBound where
   toString := LowerBound.toString
 
 instance (n : Nat) : OfNat LowerBound n where
-  ofNat := .nat n
+  ofNat := int n
 end LowerBound
 
 inductive UpperBound where
-  | nat (n : Nat)
+  | int (n : Int)
   | pinf
   deriving Repr, Inhabited
 
 namespace UpperBound
 protected def toString : UpperBound → String
-  | .nat n => toString n
+  | int n => toString n
   | .pinf => "∞"
 
 instance : ToString UpperBound where
   toString := UpperBound.toString
 
 instance (n : Nat) : OfNat UpperBound n where
-  ofNat := .nat n
+  ofNat := int n
 end UpperBound
 
 inductive MonOp where
-  | not
   | neg
   | «pre»
   deriving Repr, Inhabited
 
 namespace MonOp
 protected def toString : MonOp → String
-  | not => "¬"
   | neg => "-"
   | «pre» => "pre"
 
@@ -106,10 +104,11 @@ inductive Expr : Type where
   | node (name : &Name) (args : Array (&Expr))
   | ite (cond : &Expr) (tb : &Expr) (eb : &Expr)
   | cmp_op (op : CmpOp) (left right : &Expr)
+  | etrue | efalse
   deriving Repr, Inhabited
 
 partial def Expr.toString : Expr → String
-  | .interval {value := .nat n,..} {value := .nat k,..} => if n = k then s!"{n}" else s!"[{n},{k}]"
+  | .interval {value := .int n,..} {value := .int k,..} => if n = k then s!"{n}" else s!"[{n},{k}]"
   | .interval lb up => s!"[{lb},{up}]"
   | .var v => v.value.toString
   | .mon_op op e => s!"{op.toString} {Expr.toString e}"
@@ -117,6 +116,8 @@ partial def Expr.toString : Expr → String
   | .node n args => s!"{n.value}({args.map (Expr.toString ∘ WithRef.value) |>.toStringNoBrackets})"
   | .ite cond tb eb => s!"if {Expr.toString cond} then {Expr.toString tb} else {Expr.toString eb}"
   | .cmp_op op left right => s!"{Expr.toString left.value} {op.toString} {Expr.toString right.value}"
+  | .etrue => "true"
+  | .efalse => "false"
 
 instance : ToString Expr where
   toString := Expr.toString
@@ -226,6 +227,10 @@ partial def elabExpr (s : TSyntax `lustre_expr) (nodeEnv : NodeEnv) (varEnv : Va
   WithRef.withRef s do
   withTraceNode `Lustrean.Elab.Reify (msg := fun e => return m!"{exceptEmoji e} elabExpr\n{s}\n⇒\n{e.toOption.map toString}") do
     match s with
+    | `(lustre_expr| true) =>
+      return .etrue
+    | `(lustre_expr| false) =>
+      return .efalse
     | `(lustre_expr| $n:num) =>
       let n₁ := ⟨.nat n.getNat, n⟩
       let n₂ := ⟨.nat n.getNat, n⟩
@@ -233,11 +238,11 @@ partial def elabExpr (s : TSyntax `lustre_expr) (nodeEnv : NodeEnv) (varEnv : Va
     | `(lustre_expr| [$lbs, $ups]) =>
       let lb ← match lbs with
         | `(lustre_lower_bound| -∞) => pure .minf
-        | `(lustre_lower_bound| $n:num) => pure <| .nat n.getNat
+        | `(lustre_lower_bound| $n:num) => pure <| .int n.getNat
         | _ => throwUnsupportedSyntax
       let up ← match ups with
         | `(lustre_upper_bound| ∞) => pure .pinf
-        | `(lustre_upper_bound| $n:num) => pure <| .nat n.getNat
+        | `(lustre_upper_bound| $n:num) => pure <| .int n.getNat
         | _ => throwUnsupportedSyntax
       return .interval ⟨lb, lbs⟩ ⟨up, ups⟩
     | `(lustre_expr| $v:ident) => return .var ⟨v.getId, v⟩
@@ -286,7 +291,7 @@ partial def elabExpr (s : TSyntax `lustre_expr) (nodeEnv : NodeEnv) (varEnv : Va
     | `(lustre_expr| $l:lustre_expr ≠ $r:lustre_expr) =>
       let left ← elabExpr l
       let right ← elabExpr r
-      return .mon_op .not ⟨.cmp_op .eq left right, s⟩
+      return .mon_op .neg ⟨.cmp_op .eq left right, s⟩
     | `(lustre_expr| $l:lustre_expr < $r:lustre_expr) | `(lustre_expr| $r:lustre_expr > $l:lustre_expr) =>
       let left ← elabExpr l
       let right ← elabExpr r
@@ -330,4 +335,4 @@ end Reify
 end Lustrean.Elaboration
 
 initialize
-  registerTraceClass `Lustrean.Elab.Reify (inherited := true)
+  registerTraceClass `Lustrean.Elab.Reify (inherited := .true)

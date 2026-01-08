@@ -1168,6 +1168,7 @@ def compare (op : CompareOp) (x y : Interval constants) :
   decreasing_by all_goals simp [measure]
 
 instance : ValueDomain (Interval constants) where
+  ofNat := .interval (.int 1) (.int 1) (by simp)
   nil := ⊤                    -- we have no better approximation for nil in this domain than ⊤
   rand
     | .some x, .some y => if h : x ≤ y
@@ -1177,12 +1178,5 @@ instance : ValueDomain (Interval constants) where
     | .some x, .none => .interval (.int x) .pinf <| by constructor
     | .none, .none => .interval .minf .pinf <| by constructor
   compare := compare
-
-  -- TODO: pourquoi ça n'infère pas ??
-  covering_left := WidenLawful.covering_left
-  covering_right := WidenLawful.covering_right
-
-  bounding_low := NarrowLawful.bounding_low
-  bounding_high := NarrowLawful.bounding_high
 end Interval
 end Lustrean

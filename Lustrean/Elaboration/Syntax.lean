@@ -31,6 +31,8 @@ syntax "∞" : lustre_upper_bound
 
 syntax:max "[" lustre_lower_bound ", " lustre_upper_bound "]" : lustre_expr
 -- sugar
+syntax:max atomic("true") : lustre_expr
+syntax:max atomic("false"): lustre_expr
 syntax:max num : lustre_expr
 syntax:max ident : lustre_expr
 syntax "-" lustre_expr : lustre_expr

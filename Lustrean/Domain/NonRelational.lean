@@ -27,7 +27,6 @@ def eval : IExpr n → α
   | .var i => get x i
   | .rand a b => ι.rand a b
   | .neg e => - eval e
-  | .not e => if e matches .nil then ⊤ else ⊥
   | .binop e₁ op e₂ =>
     let i₁ := eval e₁
     let i₂ := eval e₂
@@ -42,12 +41,12 @@ def eval : IExpr n → α
     let i₁ := eval e₁
     let i₂ := eval e₂
     match op with --TODO surely this is wrong
-      | .eq  => if i₁ = i₂ then ⊤ else ⊥
-      | .neq => if i₁ = i₂ then ⊥ else ⊤
-      | .le  => if i₁ ⊑ i₂ then ⊤ else ⊥
-      | .lt  => if i₁ ⊑ i₂ ∧ i₁ ≠ i₂ then ⊤ else ⊥
-      | .ge  => if i₂ ⊑ i₁ then ⊤ else ⊥
-      | .gt  => if i₂ ⊑ i₁ ∧ i₁ ≠ i₂ then ⊤ else ⊥
+      | .eq  => if i₁ = i₂ then 1 else -1
+      | .neq => if i₁ = i₂ then -1 else 1
+      | .le  => if i₁ ⊑ i₂ then 1 else -1
+      | .lt  => if i₁ ⊑ i₂ ∧ i₁ ≠ i₂ then 1 else -1
+      | .ge  => if i₂ ⊑ i₁ then 1 else -1
+      | .gt  => if i₂ ⊑ i₁ ∧ i₁ ≠ i₂ then 1 else -1
 
 
 def assign (i : Fin n) (e : IExpr n) : NonRelational α n :=
@@ -66,10 +65,6 @@ def backwardEval (e : IExpr n) (r : α) : NonRelational α n :=
   | .neg e =>
     let i := eval x e
     let r := ι.backwardNeg i r
-    backwardEval e r
-  | .not e =>
-    let i := eval x e
-    let r := ι.backwardNot i r
     backwardEval e r
   | .binop e₁ op e₂ =>
     let i₁ := eval x e₁

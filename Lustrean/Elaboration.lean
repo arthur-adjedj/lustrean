@@ -59,4 +59,4 @@ elab_rules : command
 end Lustrean.Elaboration
 
 initialize
-  registerTraceClass `Lustrean.Elab  (inherited := true)
+  registerTraceClass `Lustrean.Elab  (inherited := .true)
