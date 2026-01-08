@@ -228,24 +228,24 @@ partial def elabExpr (s : TSyntax `lustre_expr) (nodeEnv : NodeEnv) (varEnv : Va
   withTraceNode `Lustrean.Elab.Reify (msg := fun e => return m!"{exceptEmoji e} elabExpr\n{s}\n⇒\n{e.toOption.map toString}") do
     match s with
     | `(lustre_expr| true) =>
-      return .etrue
+      return (Expr.etrue,varEnv,some Ty.bool)
     | `(lustre_expr| false) =>
-      return .efalse
+      return (Expr.efalse,varEnv,some Ty.bool)
     | `(lustre_expr| $n:num) =>
-      let n₁ := ⟨.nat n.getNat, n⟩
-      let n₂ := ⟨.nat n.getNat, n⟩
+      let n₁: &LowerBound := ⟨.int n.getNat, n⟩
+      let n₂: &UpperBound := ⟨.int n.getNat, n⟩
       return (Expr.interval n₁ n₂, varEnv, some Ty.int)
     | `(lustre_expr| [$lbs, $ups]) =>
       let lb ← match lbs with
-        | `(lustre_lower_bound| -∞) => pure .minf
-        | `(lustre_lower_bound| $n:num) => pure <| .int n.getNat
+        | `(lustre_lower_bound| -∞) => pure LowerBound.minf
+        | `(lustre_lower_bound| $n:num) => pure <| LowerBound.int n.getNat
         | _ => throwUnsupportedSyntax
       let up ← match ups with
-        | `(lustre_upper_bound| ∞) => pure .pinf
-        | `(lustre_upper_bound| $n:num) => pure <| .int n.getNat
+        | `(lustre_upper_bound| ∞) => pure UpperBound.pinf
+        | `(lustre_upper_bound| $n:num) => pure <| UpperBound.int n.getNat
         | _ => throwUnsupportedSyntax
-      return .interval ⟨lb, lbs⟩ ⟨up, ups⟩
-    | `(lustre_expr| $v:ident) => return .var ⟨v.getId, v⟩
+      return (Expr.interval ⟨lb, lbs⟩ ⟨up, ups⟩,varEnv,some Ty.int)
+    | `(lustre_expr| $v:ident) => return (Expr.var ⟨v.getId, v⟩,varEnv,none)
     | `(lustre_expr| $l + $r) =>
       let left ← elabExpr l
       let right ← elabExpr r
