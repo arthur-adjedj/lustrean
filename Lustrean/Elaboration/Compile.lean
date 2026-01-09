@@ -76,7 +76,7 @@ def addExitNode {nod} : ResultM nod Unit := do
   set {r with arr[1] := {id := 1, out_nodes := [{ out_node := r.arr.size-1, out_inst := .skip}]}}
 
 /-- How many iterations of the main loop to unroll. -/
-def unrollLoop : Nat := 1
+def unrollLoop : Nat := 0
 
 def elabResult (nod : Normalize.Node) : ResultM nod Unit := do
   for h : i in [0:nod.m] do
