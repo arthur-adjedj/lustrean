@@ -102,7 +102,7 @@ structure CoStream (σ α : Type _) where
 
  
 #grid(columns : (25%,80%),[
-```haskell
+```lustre
 node f(i) = o where
     x = pre i + 1
     o = x+i

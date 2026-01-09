@@ -2,6 +2,8 @@
 #import "@preview/cades:0.3.1": qr-code
 #import "@preview/sicons:16.0.0": *
 
+#let github-qrcode = qr-code("https://github.com/arthur-adjedj/lustrean", width: 8cm)
+
 #let desc(content) = {
   set text(fill: red.lighten(30%))
   content
@@ -31,9 +33,12 @@ Two ways to increase the amount of domains we have
 
 == Sign domain - Definition
 
+#align(center)[
 #image("resources/sign-lattice.jpg")
+]
 
 ---
+#align(center)[
 ```
 Sign             Interval
 ────             ────────
@@ -46,7 +51,9 @@ Sign             Interval
 [≤0]      ↦      (-∞,  0]
 [≠0]      ↦        ????
 ```
+]
 ---
+#align(center)[
 ```
 Sign             Interval
 ────             ────────
@@ -59,21 +66,15 @@ Sign             Interval
 [≤0]      ↦      (-∞,  0]
 [≠0]      ↦     [<0] ⊔ [>0]
 ```
+]
 ---
 == Sign domain - Demo!
 
 Consider the following:
 
+#alternatives[
+The interval domain is not able to prove this #emoji.face.sad
 #align(center)[
-#show raw.where(lang: "lustre"): it => [
-  #let ident-color = rgb(214, 58, 73)
-  #let regex-union(..elements) = "(" + elements.pos().flatten().map(x => "\\b" + x + "\\b").join("|") + ")"
-  #show regex(regex-union(
-    ("lustre", "node", "where", "assert", "if", "then", "else")
-  )) : set text(fill: ident-color)
-  #it
-]
-
 ```lustre
 lustre 
   node f(x) = y
@@ -81,6 +82,20 @@ lustre
   assert  y ≠ 0
 ``` 
 ]
+][
+However, the sign domain does! #emoji.face.happy
+#align(center)[
+```lustre
+lustre (domain := Sign)
+  node f(x) = y
+  where   y = if x ≥ 0 then x + 1 else x - 1
+  assert  y ≠ 0
+``` 
+]
+]
+
+
+---
 
 == Sign domain - Implementation
 
@@ -307,10 +322,16 @@ theorem mul_correct
 For more examples, see the github repository
 
 #align(center)[
-#qr-code("https://github.com/arthur-adjedj/lustrean", width: 8cm)
-#link("https://github.com/arthur-adjedj/lustrean")[#box(fill: gray.lighten(70%), stroke: gray.lighten(40%), radius: 5pt, outset: 4pt)[#text()[
-    // #sicon(slug: "github", size: 1em)
-    arthur-adjedj/lustrean]]]
+#let github-qrcode = qr-code("https://github.com/arthur-adjedj/lustrean", width: 8cm)
+#github-qrcode
+#link("https://github.com/arthur-adjedj/lustrean")[
+    #box(fill: gray.lighten(70%), stroke: gray.lighten(40%), radius: 5pt, outset: 4pt)[
+    #box(inset: 2pt)[#sicon(slug: "github", size: 1em)]
+    #text(baseline: -6pt)[
+    arthur-adjedj/lustrean
+    ]
+  ]
+  ]
 ]
 
 == Mathlib - What else can we get out of Mathlib?
@@ -321,8 +342,6 @@ For more examples, see the github repository
 ]
 ][
   Seems to have all we need, we're just lacking laws about $top$ and $bot$
-
-
 ]
 
 #grid(columns: (2fr, 1fr), inset: 1em)[
@@ -397,5 +416,9 @@ def gcOfSubterms(gc₀: GaloisConnection α₀ γ₀)(gc₁: GaloisConnection α
 ```
 
 ---
+
+== Future work
+
+ - 
 
 

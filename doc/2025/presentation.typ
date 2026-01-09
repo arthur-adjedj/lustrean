@@ -1,4 +1,7 @@
 #import "@preview/touying:0.6.1": *
+#import "@preview/cades:0.3.1": qr-code
+#import "@preview/sicons:16.0.0": *
+
 #import themes.metropolis: *
 
 #let lean-extra-keywords = (
@@ -26,16 +29,25 @@
   #it
 ]
 
+#show raw.where(lang: "lustre"): it => [
+  #let ident-color = rgb(214, 58, 73)
+  #let regex-union(..elements) = "(" + elements.pos().flatten().map(x => "\\b" + x + "\\b").join("|") + ")"
+  #show regex(regex-union(
+    ("lustre", "node", "where", "assert", "if", "then", "else", "pre", "->")
+  )) : set text(fill: ident-color)
+  #it
+]
+
 
 #show: metropolis-theme.with(
   aspect-ratio: "16-9",
   config-info(
     title: [Lustrean],
     subtitle: [Lean + Lustre],
-    logo: image(
-      "./resources/lean-logo-official-TM-transparent-2400x900.png",
-      width: 5em
-    ),
+    // logo: image(
+    //   "./resources/lean-logo-official-TM-transparent-2400x900.png",
+    //   width: 5em,
+    // ),
     author: [
       Arthur ADJEDJ \
       Fernando LEAL SANCHEZ \
@@ -54,6 +66,36 @@
 )
 #title-slide()
 
-#include("arthur.typ")
-#include("language-extensions.typ")
-#include("abstract-interpreter.typ")
+  #align(center)[
+  #let github-qrcode = qr-code("https://github.com/arthur-adjedj/lustrean", width: 8cm)
+  #github-qrcode
+  #link("https://github.com/arthur-adjedj/lustrean")[
+      #box(fill: gray.lighten(70%), stroke: gray.lighten(40%), radius: 5pt, outset: 4pt)[
+      #box(inset: 2pt)[#sicon(slug: "github", size: 1em)]
+      #text(baseline: -6pt)[
+      arthur-adjedj/lustrean
+      ]
+    ]
+    ]
+  ]
+
+---
+
+#include "arthur.typ"
+#include "language-extensions.typ"
+#include "abstract-interpreter.typ"
+
+---
+
+  #align(center)[
+  #let github-qrcode = qr-code("https://github.com/arthur-adjedj/lustrean", width: 8cm)
+  #github-qrcode
+  #link("https://github.com/arthur-adjedj/lustrean")[
+      #box(fill: gray.lighten(70%), stroke: gray.lighten(40%), radius: 5pt, outset: 4pt)[
+      #box(inset: 2pt)[#sicon(slug: "github", size: 1em)]
+      #text(baseline: -6pt)[
+      arthur-adjedj/lustrean
+      ]
+    ]
+    ]
+  ]
