@@ -28,3 +28,7 @@ node f(x) = y,y where
 - opérations arithmétiques → type check pour avoir des `int` (statiquement)
 - opérations booléennes → type check pour avoir des `bool`
 - comparaisons → type check pour avoir les mêmes types
+
+=== Design choices
+
+`int` are really implemented as singleton intervals in the reify phase (during elaboration)
