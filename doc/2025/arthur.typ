@@ -35,8 +35,7 @@
   align(center,image("resources/lustrean.png"))
 ,
 [
-Lustrean is an abstract interpreter of a precise semantics of a core subset
-of Lustre in Lean.
+Lustrean is an abstract interpreter of a precise semantics of a core subset of Lustre in Lean, implemented last year by Jean Caspar and Adrien Mathieu.
 - It embeds a subset of Lustre as a DSL in Lean.
 - It gives a precise semantics of that language, even to non-statically
   schedulable programs.
@@ -65,8 +64,9 @@ The original Lustrean project was great a great toy project, but needed lots of 
 #image("resources/CI.png")
 == Debugging
 #align(top)[
-Lean is extensible, let's make use of that
-- The elaborator already has a great API for traces, we thus extend it to print our own traces
+Lean is extensible, let's make use of that.
+
+The elaborator already has a great API for traces, we thus extend it to print our own traces.
 ```lean
 initialize
   registerTraceClass `Lustrean.Elab  (inherited := true)
@@ -77,7 +77,7 @@ withTraceNode `Lustrean.Elab.Reify (msg := fun e => return m!"{exceptEmoji e} el
 #image("resources/traceExample.png")
 ]
 
-== Proofwidgets
+== Graphviz widget
 
 #image("resources/graphviz.png")
 
