@@ -43,7 +43,8 @@ of Lustre in Lean.
 - It interprets them in an abstract domain to check for the absence of
   runtime errors.
 ])
-= Refactors, debugging, and the hopes for a concrete interpreter
+
+#new-section-slide("Refactors, debugging, and the hopes for a concrete interpreter") 
 
 == The need for refactors
 
@@ -64,7 +65,7 @@ The original Lustrean project was great a great toy project, but needed lots of 
 #image("resources/CI.png")
 == Debugging
 #align(top)[
-Lean is extensible, let's make great use of it
+Lean is extensible, let's make use of that
 - The elaborator already has a great API for traces, we thus extend it to print our own traces
 ```lean
 initialize
@@ -78,7 +79,7 @@ withTraceNode `Lustrean.Elab.Reify (msg := fun e => return m!"{exceptEmoji e} el
 
 == Proofwidgets
 
-#image("resources/proofwidgets.png")
+#image("resources/graphviz.png")
 
 == The hope for a concrete interpreter
 
