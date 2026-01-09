@@ -111,6 +111,19 @@ node f() where
   x = 1
 ```
 
+```lustre
+  node f() = o, o where
+    o = o
+
+  node g(x,x) where
+
+  node h(x) = x where
+
+  node i(x,y) = o where
+    o = x
+    o = y
+```
+
 #pagebreak()
 === Implementation
 
