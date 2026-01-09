@@ -343,8 +343,9 @@ partial def elabExpr (s : TSyntax `lustre_expr) (nodeEnv : NodeEnv) (varEnv : Va
       return (.bin_op .sub left right, env, some .int)
 
     | `(lustre_expr| $f:ident($args:lustre_expr,*)) =>
-      let args ← args.getElems.mapM elabExpr
-      return .node ⟨f.getId, f⟩ args
+      let args ← args.getElems.mapM (fun e => elabExpr e nodeEnv varEnv expectedType?)
+      return (.node ⟨f.getId, f⟩ args, )
+
     | `(lustre_expr| if $c then $tb else $eb) =>
       let c ← elabExpr c
       let tb ← elabExpr tb
