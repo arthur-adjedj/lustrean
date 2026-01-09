@@ -105,6 +105,8 @@ node f(x) = y,y where
 ```
 → here we can redefine `z = y` in the body
 
+=== Implementation
+
 == Type checking
 
 - pour l'instant, `int` and `bool`, avec une possibilité d'étendre le TS facilement
