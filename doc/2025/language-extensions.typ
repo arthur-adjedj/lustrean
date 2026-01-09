@@ -105,7 +105,51 @@ node f(x) = y,y where
 ```
 → here we can redefine `z = y` in the body
 
+#pagebreak()
 === Implementation
+
+```lean
+def elabNode (s : TSyntax `lustre_node) : CoreM (&Node) :=
+  withTraceNode `Lustrean.Elab.Reify
+    (msg := fun e =>
+      return m!"{exceptEmoji e} elabNode\n{s}\n⇒\n{if let .ok n := e then toMessageData n else ""}") do
+  match s with
+  | `(lustre_node| node $name($inputs:ident,*) $[= $output_vars,*]? $[guard $guards*]?
+                   where $decls* $[assert $asserts*]?) =>
+    let name := ⟨name.getId, name⟩
+    let input_vars := inputs.getElems.map fun x => ⟨x.getId, x⟩
+
+    /- we reject programs with input having repetitions -/
+    if !input_vars.allDiff then throwIllFormedSyntax
+```
+#pagebreak()
+```
+let bound_vars ← decls.mapM fun
+  | `(lustre_node_decl| $vars:ident,* = $expr:lustre_expr) => do pure {
+    names := vars.getElems.map fun var => ⟨var.getId, var⟩
+    value := ← elabExpr expr
+  }
+  | ref => withRef ref throwUnsupportedSyntax
+
+/- we reject programs with multiple redefinitions of the same variable -/
+if !(bound_vars.map (BoundVars.names)).allDiff then throwIllFormedSyntax
+
+let output_vars : Array &Name := output_vars.map (·.getElems.map (fun var => ⟨var.getId, var⟩)) |>.getD default
+```
+#pagebreak()
+```lean
+    /- we reject programs with output having repetitions -/
+    if !output_vars.allDiff then throwIllFormedSyntax
+
+    /- we reject programs with input ∩ output ≠ ø -/
+    if !(intersect (input_vars.map (Variable.name) ) output_vars).isEmpty then throwIllFormedSyntax
+
+    let guards ← guards.getD #[] |>.mapM elabBoolExpr
+    let asserts ← asserts.getD #[] |>.mapM elabBoolExpr
+    return ⟨{name, input_vars, bound_vars, output_vars, guards, asserts}, s⟩
+  | _ =>
+    throwUnsupportedSyntax
+```
 
 == Type checking
 
