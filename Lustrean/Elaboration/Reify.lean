@@ -269,7 +269,7 @@ partial def elabExpr (s : TSyntax `lustre_expr) (nodeEnv : NodeEnv) (varEnv : Va
         | _ => throwUnsupportedSyntax
       return (.interval ⟨lb, lbs⟩ ⟨up, ups⟩,varEnv,some .int)
 
-    | `(lustre_expr| $v:ident) => return (.var ⟨v.getId, v⟩,varEnv,none)
+    | `(lustre_expr| $v:ident) => return (.var ⟨v.getId, v⟩,varEnv,expectedType?) -- TODO: add `v` to be of type expectedType in varEnv + typecheck against varEnv (if it is already present)
 
     | `(lustre_expr| $l + $r) =>
       let (left, lenv, lty) ← elabExpr l nodeEnv varEnv (some Ty.int)
@@ -343,8 +343,9 @@ partial def elabExpr (s : TSyntax `lustre_expr) (nodeEnv : NodeEnv) (varEnv : Va
       return (.bin_op .sub left right, env, some .int)
 
     | `(lustre_expr| $f:ident($args:lustre_expr,*)) =>
-      let args ← args.getElems.mapM (fun e => elabExpr e nodeEnv varEnv expectedType?)
-      return (.node ⟨f.getId, f⟩ args, )
+      let argsWithEnv ← args.getElems.mapM (fun e => elabExpr e nodeEnv varEnv expectedType?)
+      let args := Array.map (fun (arg,varEnvArg,argTy?) => arg) argsWithEnv
+      return (.node ⟨f.getId, f⟩ args, varEnv, expectedType?)
 
     | `(lustre_expr| if $c then $tb else $eb) =>
       let c ← elabExpr c
