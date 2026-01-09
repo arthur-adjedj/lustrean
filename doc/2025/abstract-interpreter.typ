@@ -1,4 +1,6 @@
 #import "@preview/touying:0.6.1": *
+#import "@preview/cades:0.3.1": qr-code
+#import "@preview/sicons:16.0.0": *
 
 #let desc(content) = {
   set text(fill: red.lighten(30%))
@@ -58,8 +60,27 @@ Sign             Interval
 [≠0]      ↦     [<0] ⊔ [>0]
 ```
 ---
+== Sign domain - Demo!
 
-Demo!
+Consider the following:
+
+#align(center)[
+#show raw.where(lang: "lustre"): it => [
+  #let ident-color = rgb(214, 58, 73)
+  #let regex-union(..elements) = "(" + elements.pos().flatten().map(x => "\\b" + x + "\\b").join("|") + ")"
+  #show regex(regex-union(
+    ("lustre", "node", "where", "assert", "if", "then", "else")
+  )) : set text(fill: ident-color)
+  #it
+]
+
+```lustre
+lustre 
+  node f(x) = y
+  where   y = if x ≥ 0 then x + 1 else x - 1
+  assert  y ≠ 0
+``` 
+]
 
 == Sign domain - Implementation
 
@@ -184,3 +205,197 @@ def concrete(a: Sign): Set Int :=
 ]
 
 ---
+
+```lean
+def gc: GaloisConnection Sign.abstract Sign.concrete := by
+    rintro X ⟨p,z,n⟩
+    constructor <;> grind [LE.le]
+```
+
+#uncover(2)[
+  #align(center)[
+    #text(emoji.party, size: 4em)
+  ]
+]
+
+---
+
+```lean
+noncomputable
+instance ge: GaloisEmbedding abstract concrete := gc.toGaloisInsertion <| by
+  rintro ⟨hasPos, z, hasNeg⟩
+  simp [Sign.abstract, Sign.concrete, LE.le, Sign.incl]
+  apply And.intro
+  · if h: hasPos then apply Or.inr; exists 1  else grind
+  · if h: hasNeg then apply Or.inr; exists -1 else grind
+```
+
+---
+
+#align(top)[
+```lean
+def add(a b : Sign): Sign :=
+  if a = .None ∨ b = .None then
+    .None
+  else
+    {
+      hasZero := a.hasZero && b.hasZero ||
+                 a.hasNeg  && b.hasPos  ||
+                 a.hasPos  && b.hasNeg
+      -- Safe since we assume the other is non-empty
+      hasPos  := a.hasPos  || b.hasPos
+      -- Safe since we assume the other is non-empty
+      hasNeg  := a.hasNeg  || b.hasNeg
+    }
+```
+]
+
+#align(bottom)[
+```lean
+theorem add_correct
+: Sign.gc.IsBinAbstraction (· + ·) Sign.add
+:= by // ...
+```
+]
+---
+
+#align(top)[
+```lean
+def neg(a: Sign): Sign := {
+  a with
+  hasNeg := a.hasPos
+  hasPos := a.hasNeg
+}
+```
+]
+
+#align(bottom)[
+```lean
+def neg_complete
+: Sign.gc.IsBestAbstraction (-·) Sign.neg
+:= by
+  intros x
+  simp only [Neg.neg, Sign.concrete, Set.preimage_setOf_eq, Sign.neg]
+  grind [Sign.neg, Sign.concrete]
+```
+]
+
+---
+
+#align(top)[
+```lean
+def mul (a b: Sign): Sign := {
+    hasPos  := a.hasPos && b.hasPos ||
+               a.hasNeg && b.hasNeg
+    hasZero := a.hasZero || b.hasZero,
+    hasNeg  := a.hasNeg && b.hasPos ||
+               a.hasPos && b.hasNeg
+  }
+```
+]
+
+#align(bottom)[
+```lean
+theorem mul_correct
+: Sign.gc.IsBinAbstraction (· * ·) Sign.mul
+:= by // ...
+```
+]
+
+---
+
+For more examples, see the github repository
+
+#align(center)[
+#qr-code("https://github.com/arthur-adjedj/lustrean", width: 8cm)
+#link("https://github.com/arthur-adjedj/lustrean")[#box(fill: gray.lighten(70%), stroke: gray.lighten(40%), radius: 5pt, outset: 4pt)[#text()[
+    // #sicon(slug: "github", size: 1em)
+    arthur-adjedj/lustrean]]]
+]
+
+== Mathlib - What else can we get out of Mathlib?
+
+#grid(columns: (2fr, 1fr), inset: 1em)[
+#align(top)[
+#image("resources/mathlib-lattice.png", width: 17.5cm)
+]
+][
+  Seems to have all we need, we're just lacking laws about $top$ and $bot$
+
+
+]
+
+#grid(columns: (2fr, 1fr), inset: 1em)[
+#align(top)[
+#image("resources/mathlib-bounded-order.png", width: 17.5cm)
+]
+][
+  We can combine this with `Lattice` to obtain something close to our 
+  `BoundedLattice` definition!
+]
+
+---
+
+```lean
+def BoundedLattice.ofLatticeAndBoundedOrder {α: Type}[Lattice α][BoundedOrder α] 
+: BoundedLattice α where
+  // ...
+  join_commutative := by grind
+  join_associative := by grind
+  join_absorption x y := by grind only [inf_le_left, sup_of_le_left]
+  join_bot := by grind only [bot_le, sup_of_le_left]
+  join_top := by simp
+  meet_commutative := by grind
+  meet_associative := by grind
+  meet_absorption x y := by simp
+  meet_bot := by simp
+  meet_top := by simp
+  join_is_lub := by grind [left_eq_inf, sup_le_iff]
+  meet_is_glb := by grind [left_eq_inf, le_inf_iff]
+```
+
+== Partition domain
+
+#text(fill: white)[Demo]
+
+---
+
+#align(center)[
+```lean
+def concrete(p: Partition D₀ D₁): Set C :=
+  { e | ∀ d : D₀, e ∈ γ₀ d → e ∈ γ₁ (p d)}
+```
+\
+
+```lean
+def abstract(X: Set C): Partition D₀ D₁ :=
+  λ x ↦ α₁ (X ∩ γ₀ x)
+```
+]
+
+---
+
+```lean 
+def gcOfSubterms(gc₀: GaloisConnection α₀ γ₀)(gc₁: GaloisConnection α₁ γ₁)
+: GaloisConnection (β := Partition D₀ D₁) (α := Set C)
+  (abstract (α₁ := α₁) (γ₀ := γ₀))
+  (concrete (γ₀ := γ₀) (γ₁ := γ₁)) := by
+  have α₀_mon := gc₀.monotone_l
+  have α₁_mon := gc₁.monotone_l
+  have γ₀_mon := gc₀.monotone_u
+  have γ₁_mon := gc₁.monotone_u
+  intros X Y
+  dsimp [LE.le, abstract, concrete, Set.Subset, Subset]
+  constructor <;> intros hyp
+  · intros e e_X z e_Cz
+    specialize hyp z
+    rw [gc₁] at hyp; apply hyp; simp [*]
+  · intros z; rw [gc₁]; intros e e_int
+    simp only [Set.mem_inter_iff] at e_int
+    apply hyp <;> simp [*]
+
+```
+
+---
+
+
