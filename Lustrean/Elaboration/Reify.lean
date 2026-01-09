@@ -198,7 +198,7 @@ def merge (e1 e2 : VarsEnv) : CoreM VarsEnv := do
     match acc.get? name with
     | some ty1 =>
       if ty1 == ty2 then
-        return acc -- They match, no action needed
+        return acc
       else
         throwError m!"Type conflict for variable '{name}': '{ty1}' vs '{ty2}'"
     | none =>
@@ -244,18 +244,20 @@ def typeCheck (ty : Option Ty) (expected : Ty) : CoreM Unit := do
       if ty != some expected then
         throwError m!"application type mismatch, expected{indentD (toMessageData expected)}\nbut has{indentD (toMessageData ty)}"
 
-partial def elabExpr (s : TSyntax `lustre_expr) (nodeEnv : NodeEnv) (varEnv : VarsEnv) (expectedType? : Option Ty) : CoreM (&Expr × VarsEnv × (Option Ty)) :=
+partial def elabExpr (s : TSyntax `lustre_expr) (nodeEnv : NodeEnv) (varEnv : VarsEnv) (expectedType? : Option Ty) : CoreM (&Expr × VarsEnv × Option Ty) :=
   WithRef.withRef s do
   withTraceNode `Lustrean.Elab.Reify (msg := fun e => return m!"{exceptEmoji e} elabExpr\n{s}\n⇒\n{e.toOption.map toString}") do
     match s with
     | `(lustre_expr| true) =>
       return (Expr.etrue,varEnv,some Ty.bool)
     | `(lustre_expr| false) =>
-      return (Expr.efalse,varEnv,some Ty.bool)
+      return (.efalse,varEnv,some .bool)
+
     | `(lustre_expr| $n:num) =>
       let n₁: &LowerBound := ⟨.int n.getNat, n⟩
       let n₂: &UpperBound := ⟨.int n.getNat, n⟩
-      return (Expr.interval n₁ n₂, varEnv, some Ty.int)
+      return (.interval n₁ n₂, varEnv, some .int)
+
     | `(lustre_expr| [$lbs, $ups]) =>
       let lb ← match lbs with
         | `(lustre_lower_bound| -∞) => pure LowerBound.minf
@@ -265,8 +267,10 @@ partial def elabExpr (s : TSyntax `lustre_expr) (nodeEnv : NodeEnv) (varEnv : Va
         | `(lustre_upper_bound| ∞) => pure UpperBound.pinf
         | `(lustre_upper_bound| $n:num) => pure <| UpperBound.int n.getNat
         | _ => throwUnsupportedSyntax
-      return (Expr.interval ⟨lb, lbs⟩ ⟨up, ups⟩,varEnv,some Ty.int)
-    | `(lustre_expr| $v:ident) => return (Expr.var ⟨v.getId, v⟩,varEnv,none)
+      return (.interval ⟨lb, lbs⟩ ⟨up, ups⟩,varEnv,some .int)
+
+    | `(lustre_expr| $v:ident) => return (.var ⟨v.getId, v⟩,varEnv,none)
+
     | `(lustre_expr| $l + $r) =>
       let (left, lenv, lty) ← elabExpr l nodeEnv varEnv (some Ty.int)
       let (right, renv, rty) ← elabExpr r nodeEnv varEnv (some Ty.int)
@@ -276,29 +280,68 @@ partial def elabExpr (s : TSyntax `lustre_expr) (nodeEnv : NodeEnv) (varEnv : Va
 
       let env <- lenv.merge renv
 
-      return (Expr.bin_op .add left right, env, some Ty.int)
+      return (.bin_op .add left right, env, some .int)
+
     | `(lustre_expr| $l fby $r) =>
-      let left ← elabExpr l
-      let right ← elabExpr r
-      return .bin_op .fby left right
+      let (left, lenv, lty) ← elabExpr l nodeEnv varEnv expectedType?
+      let (right, renv, rty) ← elabExpr r nodeEnv varEnv expectedType?
+
+      if let some expectedType := expectedType? then
+        typeCheck lty expectedType
+        typeCheck rty expectedType
+
+      let env <- lenv.merge renv
+
+      return (.bin_op .fby left right, env, expectedType?)
+
     | `(lustre_expr| $l -> $r) =>
-      let left ← elabExpr l
-      let right ← elabExpr r
-      return .bin_op .arr left right
+      let (left, lenv, lty) ← elabExpr l nodeEnv varEnv expectedType?
+      let (right, renv, rty) ← elabExpr r nodeEnv varEnv expectedType?
+
+      if let some expectedType := expectedType? then
+        typeCheck lty expectedType
+        typeCheck rty expectedType
+
+      let env <- lenv.merge renv
+
+      return (.bin_op .arr left right, env, expectedType?)
+
     | `(lustre_expr| - $e) =>
-      let e ← elabExpr e
-      return .mon_op .neg e
+      let (e,env,ty) ← elabExpr e nodeEnv varEnv (some .int)
+
+      typeCheck ty .int
+
+      return (.mon_op .neg e,env, some .int)
+
     | `(lustre_expr| pre $e) =>
-      let e ← elabExpr e
-      return .mon_op .pre e
+      let (e,env,ty) ← elabExpr e nodeEnv varEnv expectedType?
+
+      if let some expectedType := expectedType? then
+        typeCheck ty expectedType
+
+      return (.mon_op .pre e, env, expectedType?)
+
     | `(lustre_expr| $l * $r) =>
-      let left ← elabExpr l
-      let right ← elabExpr r
-      return .bin_op .mul left right
+      let (left, lenv, lty) ← elabExpr l nodeEnv varEnv (some Ty.int)
+      let (right, renv, rty) ← elabExpr r nodeEnv varEnv (some Ty.int)
+
+      typeCheck lty Ty.int
+      typeCheck rty Ty.int
+
+      let env <- lenv.merge renv
+
+      return (.bin_op .mul left right, env, some .int)
     | `(lustre_expr| $l - $r) =>
-      let left ← elabExpr l
-      let right ← elabExpr r
-      return .bin_op .sub left right
+      let (left, lenv, lty) ← elabExpr l nodeEnv varEnv (some Ty.int)
+      let (right, renv, rty) ← elabExpr r nodeEnv varEnv (some Ty.int)
+
+      typeCheck lty Ty.int
+      typeCheck rty Ty.int
+
+      let env <- lenv.merge renv
+
+      return (.bin_op .sub left right, env, some .int)
+
     | `(lustre_expr| $f:ident($args:lustre_expr,*)) =>
       let args ← args.getElems.mapM elabExpr
       return .node ⟨f.getId, f⟩ args
