@@ -116,9 +116,6 @@ node f() where
 
 ```lean
 def elabNode (s : TSyntax `lustre_node) : CoreM (&Node) :=
-  withTraceNode `Lustrean.Elab.Reify
-    (msg := fun e =>
-      return m!"{exceptEmoji e} elabNode\n{s}\n⇒\n{if let .ok n := e then toMessageData n else ""}") do
   match s with
   | `(lustre_node| node $name($inputs:ident,*) $[= $output_vars,*]? $[guard $guards*]?
                    where $decls* $[assert $asserts*]?) =>
@@ -140,10 +137,11 @@ let bound_vars ← decls.mapM fun
 /- we reject programs with multiple redefinitions of the same variable -/
 if !(bound_vars.map (BoundVars.names)).allDiff then throwIllFormedSyntax
 
-let output_vars : Array &Name := output_vars.map (·.getElems.map (fun var => ⟨var.getId, var⟩)) |>.getD default
 ```
 #pagebreak()
 ```lean
+    let output_vars : Array &Name := output_vars.map (·.getElems.map (fun var => ⟨var.getId, var⟩)) |>.getD default
+
     /- we reject programs with output having repetitions -/
     if !output_vars.allDiff then throwIllFormedSyntax
 
