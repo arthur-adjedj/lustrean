@@ -170,20 +170,28 @@ if !(bound_vars.map (BoundVars.names)).allDiff then throwIllFormedSyntax
 
 == Type checking
 
-- pour l'instant, `int` and `bool`, avec une possibilité d'étendre le typesystem facilement
-- opérations arithmétiques → type check pour avoir des `int` (statiquement)
-- opérations booléennes → type check pour avoir des `bool`
-- comparaisons → type check pour avoir les mêmes types
+```lean
+inductive Ty where
+  | int : Ty
+  | bool : Ty
+deriving BEq
+```
+
+- integer operations → type checks for `int` on operands
+- boolean operations → type checks for `bool` on operands
+- comparisons → type checks for same types on operands, constrains operands to the same type in case not typed yet
 
 === Design choices
 
-`int` are really implemented as singleton intervals in the reify phase (during elaboration)
-
-`bool` were represented as `0` or anything else other than `0`.
+// `int` are really implemented as singleton intervals in the reify phase (during elaboration)
+//
+// `bool` were represented as `0` or anything else other than `0`.
 
 The type-checker does not care about the actual implementation, and focuses only on the carried type (anyway, it is thrown away at runtime).
 
-== TODO
+== What's left ?
+
+Finish the type-checker
 
 === Language extensions
 
