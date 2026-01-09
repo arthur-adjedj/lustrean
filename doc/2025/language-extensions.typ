@@ -105,6 +105,12 @@ node f(x) = y,y where
 ```
 → here we can redefine `z = y` in the body
 
+```lustre
+node f() where
+  x = 0
+  x = 1
+```
+
 #pagebreak()
 === Implementation
 
@@ -153,7 +159,7 @@ let output_vars : Array &Name := output_vars.map (·.getElems.map (fun var => �
 
 == Type checking
 
-- pour l'instant, `int` and `bool`, avec une possibilité d'étendre le TS facilement
+- pour l'instant, `int` and `bool`, avec une possibilité d'étendre le typesystem facilement
 - opérations arithmétiques → type check pour avoir des `int` (statiquement)
 - opérations booléennes → type check pour avoir des `bool`
 - comparaisons → type check pour avoir les mêmes types
