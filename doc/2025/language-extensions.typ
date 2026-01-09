@@ -1,13 +1,96 @@
 = Extending `Lustrean`
+New primitives
 
-== New primitives
+// `pre`, →, `fby`
+== `pre`
 
-`pre`, →, `fby`
-// explain semantics
+=== Syntax.lean
+```lean
+syntax " pre " lustre_expr : lustre_expr
+```
 
+=== Reify.lean
+
+```lean
+inductive MonOp where
+  | «pre»
+  deriving Repr, Inhabited
+
+namespace MonOp
+protected def toString : MonOp → String
+  | «pre» => "pre"
+```
+
+#pagebreak()
+=== Normalize.lean
+
+```lean
+partial def elabExprAux {n m : Nat} (nod : NodeN n m) : Indicise.Expr n m → NormalizeM (AuxExpr n m)
+| .mon_op .pre ⟨e, _⟩ => do
+    let ⟨m', _, e, nod⟩ ← elabExprAux nod e
+    let ⟨m', _, x, nod⟩ ← addVarIfNotBvar default e nod
+    return {
+      m' := m'
+      e := .simple <| .var (.old_bound_var x)
+      nod := nod
+    }
+```
+
+== `fby` and →
+
+=== Syntax.lean
+
+```lean
+syntax:35 lustre_expr:36 " fby " lustre_expr:35 : lustre_expr
+syntax:35 lustre_expr:36 " -> " lustre_expr:35 : lustre_expr
+```
+
+=== Reify.lean
+
+```lean
+namespace Reify
+inductive BinOp where
+  | fby
+  | arr
+  deriving Repr, Inhabited
+
+namespace BinOp
+protected def toString : BinOp → String
+  | .fby => "fby"
+  | .arr => "->"
+```
+
+=== Normalize.lean
+
+```lean
+partial def elabExprAux {n m : Nat} (nod : NodeN n m) : Indicise.Expr n m → NormalizeM (AuxExpr n m)
+  | .bin_op .fby ⟨e₁, _⟩ ⟨e₂, _⟩ => do
+    let ⟨_, m_leq_m₁, e₁, nod⟩ ← elabSimpleExprAux nod e₁
+    let ⟨m₂, _, e₂, nod⟩ ← elabExprAux nod (e₂.upcast m_leq_m₁)
+    let ⟨m', _, x, nod⟩ ← addVarIfNotBvar default e₂ nod
+    let cond := .cmp_op .eq (.var .step) (.interval 0 0)
+    return {
+      m' := m'
+      e := .ite cond (e₁.upcast <| by omega) (.var <| .old_bound_var x)
+      nod := nod
+    }
+```
+
+#pagebreak()
+```lean
+  | .bin_op .arr ⟨e₁, _⟩ ⟨e₂, _⟩ => do
+    let ⟨_, m_leq_m₁, e₁, nod⟩ ← elabSimpleExprAux nod e₁
+    let ⟨m₂, _, e₂, nod⟩ ← elabSimpleExprAux nod (e₂.upcast m_leq_m₁)
+    let cond := .cmp_op .eq (.var .step) (.interval 0 0)
+    return {
+      m' := m₂
+      e := .ite cond (e₁.upcast <| by omega) (e₂.upcast <| by omega)
+      nod := nod
+    }
+```
 == Rejecting ill-formed programs
 
-Examples
+=== Examples
 
 ```lustre
 node f(x) = x where
@@ -32,3 +115,17 @@ node f(x) = y,y where
 === Design choices
 
 `int` are really implemented as singleton intervals in the reify phase (during elaboration)
+
+`bool` were represented as `0` or anything else other than `0`.
+
+The type-checker does not care about the actual implementation, and focuses only on the carried type (anyway, it is thrown away at runtime).
+
+== TODO
+
+=== Language extensions
+
+`when`, `merge`
+
+=== Type checking clocks
+
+Currently hard to do because we currently rely on a program-wide clock, which we cannot type without doing a complete overhaul of the system.
