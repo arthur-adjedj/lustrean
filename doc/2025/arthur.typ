@@ -60,15 +60,30 @@ The original Lustrean project was great a great toy project, but needed lots of 
   - Refactored the formalisation of Domain Theory to rely on Mathlib (See Fernando's part)]
 
 
+== CI
+#image("resources/CI.png")
 == Debugging
-
+#align(top)[
 Lean is extensible, let's make great use of it
-- 
+- The elaborator already has a great API for traces, we thus extend it to print our own traces
+```lean
+initialize
+  registerTraceClass `Lustrean.Elab  (inherited := true)
+
+withTraceNode `Lustrean.Elab.Reify (msg := fun e => return m!"{exceptEmoji e} elabExpr\n{s}\n⇒\n{e.toOption.map toString}") do ...
+```
+
+#image("resources/traceExample.png")
+]
+
+== Proofwidgets
+
+#image("resources/proofwidgets.png")
 
 == The hope for a concrete interpreter
 
-Lean has dependent types
-Objective: use those to make a correct-by-construction concrete interpreter 
+Lean has dependent types \
+Objective: use those to make a correct-by-construction concrete interpreter  \
 How: using CoStreams and heterogeneous lists:
 
 ```lean
