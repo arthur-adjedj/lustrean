@@ -9,10 +9,9 @@ open Lean.Server.RpcEncodable (rpcEncode)
 
 def mkHtmlDotStx (ref : Syntax) (toDot : Std.Format) : Elab.Command.CommandElabM Unit := withRef ref do
   let url := "https://quickchart.io/graphviz?graph=" ++ (toDot.pretty /-|>.replace '\n' "" |>.replace ' ' ""-/)
-  let embed := Lean.mkIdent `embed
-  let type := Lean.mkIdent `type
+  let img := Lean.mkIdent `img
   let src := Lean.mkIdent `src
-  let html ← ``(<$embed:ident $type:ident ="text/html" $src:ident = {$(Syntax.mkStrLit url)}> </$embed>)
+  let html ← ``(<$img:ident $src:ident = {$(Syntax.mkStrLit url)} /-$(mkIdent `height):ident = "550"-/ />)
   let htX ← Elab.Command.liftTermElabM <| evalCommandMHtml <| ← ``(ProofWidgets.HtmlEval.eval $html)
   let ht ← htX
   liftCoreM <| Widget.savePanelWidgetInfo
