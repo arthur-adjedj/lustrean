@@ -2,71 +2,56 @@ import Lustrean.Domain.NonRelational
 import Misc.Int
 import Mathlib.Order.WithBot
 
+import Lean
+
+set_option trace.profiler true
 namespace Lustrean
 
-abbrev ClosedInt := WithTop (WithBot Int)
+def hle{α: Type}[LE α]: WithBot α → WithTop α → Prop
+  | ⊥, _ 
+  | _, ⊤ => True 
+  | (x: α), (y: α) => x ≤ y
+notation x "≤∘" y => bot_top_le x y
 
-#synth Std.IsLinearOrder ClosedInt
-instance: SMul ℕ Int where smul s n := s * n
+@[simp, grind .] theorem hle_top {α: Type}[LE α]: ∀ (x: WithBot α), hle x ⊤ 
+  := by rintro ⟨⟩ <;> simp only [hle]
+@[simp, grind .] theorem bot_hle {α: Type}[LE α]: ∀ (x: WithTop α), hle ⊥ x 
+  := by intro; simp only [hle]
 
-@[to_dual] instance {α: Type}[ι: Add α]: Add (WithBot α) where
-  add x y := show Option α from do ι.add (←x) (←y)
-
-@[to_dual] instance{α β: Type*}[ι:SMul α β]: SMul α (WithBot β) where
-  smul s n := show Option _ from do ι.smul s (←n)
-
-instance {α: Type}[ι: Mul α]: Mul (WithTop (WithBot α)) where
-  mul
-  | ⊤, ⊥ | ⊥, ⊤ => ⊥
-  | ⊥, ⊥ | ⊤, ⊤ => ⊤
-  | ⊤, _ | _, ⊤ => ⊤
-  | ⊥, _ | _, ⊥ => ⊤
-  | .some (.some x), .some (.some y) => ι.mul x y
-
-instance {α: Type}[ι: Neg α]: Neg (WithTop (WithBot α)) where
-  neg
-  | ⊤ => ⊥
-  | ⊥ => ⊤
-  | .some (.some e) => ι.neg e
-
-instance: Sub ClosedInt where sub x y := x + (-y)
-
-instance: Zero ClosedInt where zero := .some (.some 0)
-
-@[to_dual] instance{α: Type*}[ι:One α]: One (WithBot α) where
-  one := ι.one
-
-instance: Lean.Grind.IntModule ClosedInt where
-  add_zero := by
-    rintro (_ | (_ | _)) <;> simp [HAdd.hAdd, Add.add, Zero.zero]
-    sorry
-
-instance: SMul ℕ ClosedInt where
-  smul s
-  | ⊥ => ⊥
-  | ⊤ => ⊤
-  | .some (.some n) => .some (.some)
-
-#synth Lean.Grind.IntModule (ClosedInt)
-
-Neg M, Sub M
+instance{α: Type}[LE α][Trans LE.le (α := WithBot α)]: Trans (LE.le (α := WithBot α)) hle hle where
+    trans := by
+        intros x y z
+        match x, y, z with 
+        | x, ⊥, z => simp only [WithBot.le_bot_iff, hle, forall_const]; rintro rfl; dsimp
+        | x, (y: α), ⊤ => cases x <;> simp
+        | x, (y: α), (z: α) =>
+          cases x <;> simp [hle]
+          intro a b; trans 
+        /- intros x y z xy yz -/
+        /- rcases x with ⟨x⟩ | _; case minf => constructor -/
+        /- rcases y with ⟨y⟩ | _; case minf => cases xy -/
+        /- rcases z with ⟨z⟩ | _; case pinf => constructor -/
+        /- simp only [IntLow.Le.le_iff, HLe.hle_int] at * -/
+        /- trans y <;> assumption -/
 
 -- Parameterized by the list of constants
 -- in the source program, in order to do
 -- a better widening
-inductive Interval (constants : List Int) where
-  | empty : Interval constants
-  | interval (low : ClosedInt) (high : ClosedInt) : low ≤ high → Interval constants
+inductive Interval where
+  | empty : Interval
+  | interval (low : WithBot Int) (high : WithTop Int) : low ≤ high → Interval
   deriving Repr, Inhabited, DecidableEq
 
-@[grind]
-instance(cts: List Int): Bot (Interval cts) where bot := .empty
-instance(cts: List Int): EmptyCollection (Interval cts) where emptyCollection := .empty
-instance(cts: List Int): Top (Interval cts) where top := .interval ⊥ ⊤ (by simp)
 
 namespace Interval
-variable {constants : List Int}
-variable (x y z : Interval constants)
+
+@[grind] instance: Bot Interval where bot := .empty
+@[grind] instance: EmptyCollection Interval where emptyCollection := .empty
+@[grind] instance: Top Interval where top := .interval ⊥ ⊤ (by simp)
+variable (x y z : Interval)
+
+def rec{motive: Interval cts
+
 
 def mapEmpty (f : (low₁ low₂ : ClosedInt) → (high₁ high₂ : ClosedInt) →
                    low₁ ≤ high₁ → low₂ ≤ high₂ →
