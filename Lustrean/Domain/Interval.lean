@@ -4,13 +4,8 @@ import Mathlib.Order.BoundedOrder.Lattice
 
 import Lean
 
-set_option trace.profiler true
+-- set_option trace.profiler true
 namespace Lustrean
-
--- abbrev CoPair(α: Type)[LE α] := αᵒᵈ × α
-
--- #synth LE (CoPair Nat)
--- #eval ((((1: ℕ) : ℕᵒᵈ), 2) : CoPair Nat) ≤ ((0: ℕ), 2)
 
 def hle{α: Type}[LE α]: WithBot α → WithTop α → Prop
   | (x: α), (y: α) => x ≤ y
@@ -98,8 +93,6 @@ theorem mk_le_mk (l l': WithBot Int) (h h': WithTop Int)
   (inv': l' ≤∘ h')
 :  instLE.le (⟨⟨l, h⟩,inv⟩: NonEmpty) (⟨⟨l', h'⟩, inv'⟩ : NonEmpty)
 ↔ l' ≤ l ∧ h ≤ h' := by rfl
-
-#synth Preorder Int
 
 instance: Preorder Interval.NonEmpty where
   le_refl := by
@@ -272,9 +265,11 @@ instance: SemilatticeInf Interval where
         obtain ⟨_,_⟩ := hxz
         simp [*]
       · -- Intersection is empty
-        have ⟨l, h, l_def, h_def, l_h⟩ := not_hle _ _ cond
         exfalso
-        sorry
+        apply cond
+        calc _ ≤  xl := by grind
+             _ ≤∘ xh := by assumption
+             _ ≤  _  := by rw [min_def]; split <;> grind
     | .mk yl yh yinv, .mk zl zh zinv, ⊥  => intros; constructor
     | ⊥, _, _
     | .mk l h inv, ⊥, _ => intros; simpa
