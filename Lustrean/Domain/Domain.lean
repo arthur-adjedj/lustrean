@@ -207,11 +207,13 @@ theorem trivial_of_top_eq_bot
    _ = x ⊓ ⊥ := by rw [h]
    _ = ⊥     := by rw [meet_bot]
 
-instance{α: Type}[LE α][Std.IsPreorder α]: Preorder α where
+instance (priority := low)
+  {α: Type}[LE α][Std.IsPreorder α]: Preorder α where
   le_refl := Std.IsPreorder.le_refl
   le_trans := Std.IsPreorder.le_trans
 
-instance{α: Type}[LE α][Std.IsPartialOrder α]: PartialOrder α where
+instance(priority := low)
+  {α: Type}[LE α][Std.IsPartialOrder α]: PartialOrder α where
   le_antisymm := Std.IsPartialOrder.le_antisymm
 
 instance: Std.IsPartialOrder α where
@@ -241,6 +243,15 @@ instance: SemilatticeInf α where
     apply meet_is_glb
 
 instance: Lattice α where
+
+/- Alternative definition -/
+def other : Lattice α := Lattice.mk'
+  (sup_comm     := join_commutative)
+  (sup_assoc    := join_associative)
+  (inf_comm     := meet_commutative)
+  (inf_assoc    := meet_associative)
+  (sup_inf_self := join_absorption)
+  (inf_sup_self := meet_absorption)
 
 instance: OrderTop α where
   le_top := by simp [LE.le, IsSubset]
