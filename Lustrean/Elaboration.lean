@@ -29,7 +29,8 @@ def elabLustre (nodes : TSyntaxArray `lustre_node) : ReaderT Options CoreM Unit 
       let opts ← read
       match opts.dom with
       | .UndefinedInterval =>
-        let state ← withRef ref do State.run (m := CoreM) (α := NonRelational (Undefined (Interval [])) n) cfg
+        have : ValueDomain Interval := Interval.ofConstantsAndLimit (cts := []) (limit := 10)
+        let state ← withRef ref do State.run (m := CoreM) (α := NonRelational (Undefined Interval) n) cfg
         -- println! "Step ∞"
         -- for (env, i) in state.node_env.zipIdx do
         --   dbg_trace s!" {i}) {env}"
