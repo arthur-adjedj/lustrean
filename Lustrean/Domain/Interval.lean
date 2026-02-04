@@ -1,6 +1,13 @@
 import Lustrean.Domain.NonRelational
 import Mathlib.Order.WithBot
 import Mathlib.Order.BoundedOrder.Lattice
+import Mathlib.Order.GaloisConnection.Defs
+import Mathlib.Order.Bounds.Defs
+import Mathlib.Data.Set.Defs
+import Mathlib.Data.Set.Operations
+import Mathlib.Algebra.Group.Pointwise.Set.Basic
+import Mathlib.Data.Int.SuccPred
+import Mathlib.Order.SuccPred.Archimedean
 
 import Lean
 
@@ -180,7 +187,7 @@ theorem mk_le_mk (l l': WithBot Int) (h h': WithTop Int)
 
 instance : Preorder Interval.NonEmpty where
   le_refl := by
-    rintro ⟨⟨l, h⟩, _⟩; simp
+    rintro ⟨⟨l, h⟩, _⟩; simp only [mk_le_mk, Std.IsPreorder.le_refl, and_self]
   le_trans := by
     rintro ⟨⟨l₁, h₁⟩, _⟩ ⟨⟨l₂, h₂⟩, _⟩ ⟨⟨l₃, h₃⟩, _⟩
     simp only [mk_le_mk]
@@ -388,6 +395,7 @@ theorem meet_commutative (x y : Interval) : x ⊓ y = y ⊓ x := by
   | .mk .., ⊥
   | ⊥, ⊥ => simp only [meet]
 
+set_option maxHeartbeats 10000000 in
 theorem inf_le_left (x y : Interval): x ⊓ y ≤ x := by
     match x, y with
     | ⊥, _
@@ -660,5 +668,231 @@ def ofConstantsAndLimit (cts : List Int := []) (limit : Nat := 10) : ValueDomain
     bounding_low := NarrowLawful.bounding_low
     bounding_high := NarrowLawful.bounding_high
   }
+
+def concrete: Interval → Set Int
+| ⊥ => ∅
+| .mk l h .. => {x : Int | l ≤ x ∧ x ≤ h}
+
+#check Classical.propDecidable
+
+#check SupSet.sSup
+
+/- Couldn't find a better definition for this.
+   See https://leanprover.zulipchat.com/#narrow/channel/217875-Is-there-code-for-X.3F/topic/The.20minimum.20of.20a.20.60Set.60.20if.20it.20exists.20else.20.60bot.60/with/570279925-/
+open Classical in
+noncomputable
+def Set.min?{α: Type}[PartialOrder α](s: Set α)(nonempty: s ≠ ∅ ): WithBot α :=
+  if h : ∃ (x: α), IsLeast s x then
+    (Classical.choose h: α)
+  else
+    ⊥
+
+-- TODO: Maybe this can be done through SupSet and InfSet notations?
+-- I think I can exploit that Int is a CompleteLattice to derive
+-- instances of CompleteSemilatticeSup for WithTop (resp. Inf for Bot),
+-- and redefine
+--     max? as ⨆ (WithTop.some '' s)
+--     min? as ⨅ (WithBot.some '' s)
+-- May be worth looking into once the proofs are done, or if they become
+-- more complicated than expected.
+
+notation "⨅₂" s:max => Set.min? s (by grind)
+
+open Classical in
+noncomputable
+def Set.max?{α: Type}[PartialOrder α](s: Set α)(nonempty: s ≠ ∅): WithTop α :=
+  if h : ∃ (x: α), IsGreatest s x then
+    (Classical.choose h: α)
+  else
+    ⊤
+
+notation "⨆₂" s:max => Set.max? s (by grind)
+
+theorem _root_.Set.min?_hle_max?(s: Set Int)(h: s ≠ ∅): ⨅₂ s ≤∘ ⨆₂ s
+:= by
+  dsimp only [Set.min?, Set.max?]
+  split
+  case isTrue hasMin =>
+    have ⟨min_in_s, min_lb⟩ := Classical.choose_spec hasMin
+    split
+    case isTrue hasMax =>
+      have ⟨max_in_s, max_ub⟩ := Classical.choose_spec hasMax
+      apply min_lb; assumption
+    case isFalse =>
+      apply WithBot.hle_top
+  case isFalse =>
+    apply WithBot.bot_hle
+
+theorem _root_.Set.min?_le_of_mem{s: Set Int}(h: s ≠ ∅): ∀ x ∈ s, ⨅₂ s ≤ x
+:= by
+  intros x x_S
+  dsimp only [Set.min?]
+  split
+  case isTrue h =>
+    have ⟨inS, bound⟩ := Classical.choose_spec h
+    simp only [WithBot.coe_le_coe]
+    apply bound x_S
+  case isFalse => apply bot_le
+
+theorem _root_.Set.le_max?_of_mem(s: Set Int)(h: s ≠ ∅): ∀ x ∈ s, x ≤ ⨆₂ s
+:= by
+  intros x x_S
+  dsimp only [Set.max?]
+  split
+  case isTrue h =>
+    have ⟨inS, bound⟩ := Classical.choose_spec h
+    simp only [WithTop.coe_le_coe]
+    apply bound x_S
+  case isFalse => apply le_top
+
+theorem _root_.Set.le_min?(s: Set Int)(nonempty: s ≠ ∅)
+: ∀ (x: Int), x ≤ ⨅₂ s ↔ (∀ z ∈ s, x ≤ z)
+:= by
+  intros x
+  constructor <;> intros hyp
+  · intros z z_s
+    apply WithBot.coe_le_coe.mp
+    calc x ≤ ⨅₂ s := by assumption
+         _ ≤ z := by apply s.min?_le_of_mem <;> assumption
+  · have bd: BddBelow s := by
+      simp only [BddBelow,lowerBounds,Set.Nonempty,Set.mem_setOf_eq]
+      exists x
+    have h := bd.exists_isLeast_of_nonempty (by grind only [Set.nonempty_iff_empty_ne])
+    unfold Set.min?
+    simp only [h, reduceDIte, WithBot.coe_le_coe]
+    apply hyp
+    have ⟨_, _⟩ := Classical.choose_spec h
+    assumption
+
+theorem _root_.Set.max?_le(s: Set Int)(nonempty: s ≠ ∅)
+: ∀ (x: Int), ⨆₂ s ≤ x ↔ (∀ z ∈ s, z ≤ x)
+:= by
+  intros x
+  constructor <;> intros hyp
+  · intros z z_s
+    apply WithTop.coe_le_coe.mp
+    calc z ≤ ⨆₂ s := by apply s.le_max?_of_mem <;> assumption
+         _ ≤ x := by assumption
+  · have bd: BddAbove s := by
+      simp only [BddAbove,upperBounds,Set.Nonempty,Set.mem_setOf_eq]
+      exists x
+    have h := bd.exists_isGreatest_of_nonempty (by grind only [Set.nonempty_iff_empty_ne])
+    unfold Set.max?
+    simp only [h, reduceDIte, WithTop.coe_le_coe]
+    apply hyp
+    have ⟨_, _⟩ := Classical.choose_spec h
+    assumption
+
+theorem _root_.Set.le_min?_of_mem(s: Set Int)(h: s ≠ ∅): ∀ x ∈ s, x = ⨅₂ s ↔ x ≤ ⨅₂ s
+:= by
+  intros x x_S
+  dsimp only [Set.min?]
+  split <;> simp only [WithBot.coe_le_coe, WithBot.coe_inj, le_bot_iff, WithBot.coe_ne_bot]
+  rename_i hasMin
+  have ⟨min_in_s, min_lb⟩ := Classical.choose_spec hasMin
+  specialize min_lb x_S
+  grind only
+
+theorem _root_.Set.max?_le_of_mem(s: Set Int)(h: s ≠ ∅): ∀ x ∈ s, x = ⨆₂ s ↔ ⨆₂ s ≤ x
+:= by
+  intros x x_S
+  dsimp only [Set.max?]
+  split <;> simp only [WithTop.coe_le_coe, WithTop.coe_inj, top_le_iff]
+  rename_i hasMin
+  have ⟨min_in_s, min_lb⟩ := Classical.choose_spec hasMin
+  specialize min_lb x_S
+  grind only
+
+theorem _root_.Set.bdd_of_le_min?(s: Set Int)(h: s ≠ ∅)(e: Int)
+: e ≤ (⨅₂ s) → BddBelow s
+:= by
+  intros hyp
+  simp only [BddBelow,lowerBounds,Set.Nonempty,Set.mem_setOf_eq]
+  exists e
+  intros x x_s
+  apply WithBot.coe_le_coe.mp
+  calc e ≤ ⨅₂ s := by assumption
+       _ ≤ x    := by apply Set.min?_le_of_mem <;> assumption
+
+theorem _root_.Set.bdd_of_max?_le(s: Set Int)(h: s ≠ ∅)(e: Int)
+: (⨆₂ s) ≤ e → BddAbove s
+:= by
+  intros hyp
+  simp only [BddAbove,upperBounds,Set.Nonempty,Set.mem_setOf_eq]
+  exists e
+  intros x x_s
+  apply WithTop.coe_le_coe.mp
+  calc x ≤ ⨆₂ s := by apply Set.le_max?_of_mem <;> assumption
+       _ ≤ e    := by assumption
+
+open Classical in
+noncomputable
+def abstract(s: Set Int): Interval :=
+  if cond: s = ∅ then
+    ⊥
+  else
+    mk (⨅₂ s) (⨆₂ s) (s.min?_hle_max? cond)
+
+#print BddAbove
+#print BddBelow
+
+
+def gc: GaloisConnection abstract concrete := by
+  intros s x
+  if nonempty: s = ∅ then
+    subst s
+    simp only [concrete, abstract, reduceDIte, bot_le, Set.le_eq_subset, Set.empty_subset]
+  else
+  match x with
+  | ⊥ =>
+    simp only [abstract, nonempty, ne_eq, ↓reduceDIte, mk, le_bot_iff, concrete,
+      Set.le_eq_subset, Set.subset_empty_iff, iff_false]
+    intros h
+    simp only [WithBot.some, Bot.bot, reduceCtorEq] at h
+  | .mk xl xh xinv =>
+    simp only [abstract, nonempty, mk, concrete,
+      Set.le_eq_subset, ↓reduceDIte, ]
+    constructor <;> intros hyp
+    · have ⟨xl_minS, maxS_xh⟩ := WithBot.coe_le_coe.mp hyp
+      intros e e_S
+      constructor
+      · calc xl ≤ ⨅₂ s := by assumption
+              _ ≤ e   := by apply Set.min?_le_of_mem <;> assumption
+      · calc e ≤  ⨆₂ s := by apply Set.le_max?_of_mem <;> assumption
+              _ ≤ xh  := by assumption
+    · apply WithBot.coe_le_coe.mpr
+      simp only [NonEmpty.mk_le_mk]
+      constructor
+      · match xl with
+        | ⊥ => apply bot_le
+        | (xl: Int) =>
+          have ⟨l, l_S, l_eq⟩ : ∃ l ∈ s, l = ⨅₂ s := by
+            fun_cases (⨅₂ s) <;> rename_i h
+            · have ⟨e, h⟩ := Classical.choose_spec h
+              simp only [WithBot.coe_inj, exists_eq_right, e]
+            · exfalso
+              rename_i h
+              simp only [IsLeast, lowerBounds, Set.mem_setOf_eq, not_exists,
+                not_and, not_forall, not_le] at h
+              have : xl ≤ ⨅₂ s := by
+                apply _root_.Set.le_min?_of_mem
+                sorry
+              have := s.bdd_of_le_min? nonempty xl this
+              have ⟨e, e_S⟩ := Set.nonempty_iff_ne_empty.mpr nonempty
+              have ⟨e', e'_S, e'_e⟩ := h e e_S
+              have ⟨xl_e, _⟩ := hyp e'_S
+              -- TODO: One has to reason about infinite sequences.
+              -- Alternatively, I can probably dodge this by just
+              -- stating that if γ s ⊆ [x,y], then BddAbove s and BddBelow s
+              -- are true.
+              -- Something like `BddBelow.exists_isLeast_of_nonempty`
+              sorry
+          have ⟨_,_⟩ := hyp l_S
+          grind
+      · -- Similar to previous case, but with max
+        sorry
+
+
 end Interval
+
 end Lustrean
