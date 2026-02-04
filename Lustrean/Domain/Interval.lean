@@ -7,42 +7,42 @@ import Lean
 -- set_option trace.profiler true
 namespace WithBot
 
-def hle{α: Type}[LE α]: WithBot α → WithTop α → Prop
-  | (x: α), (y: α) => x ≤ y
+def hle{α : Type} [LE α] : WithBot α → WithTop α → Prop
+  | (x : α), (y : α) => x ≤ y
   | _, _ => True
 
 notation x:60 "≤∘" y:61 => hle x y
 
-@[simp, grind .] theorem hle_top {α: Type}[LE α]: ∀ (x: WithBot α), x ≤∘ ⊤
+@[simp, grind .] theorem hle_top {α : Type} [LE α] : ∀ (x : WithBot α), x ≤∘ ⊤
   := by rintro ⟨⟩ <;> simp only [hle]
-@[simp, grind .] theorem bot_hle {α: Type}[LE α]: ∀ (x: WithTop α), ⊥ ≤∘ x
+@[simp, grind .] theorem bot_hle {α : Type} [LE α] : ∀ (x : WithTop α), ⊥ ≤∘ x
   := by intro; simp only [hle]
-@[simp, grind =] theorem coe_hle_coe {α: Type}[LE α] (x y: α): (x ≤∘ (y: WithTop α)) = (x ≤ y)
+@[simp, grind =] theorem coe_hle_coe {α : Type} [LE α] (x y: α): (x ≤∘ (y : WithTop α)) = (x ≤ y)
   := rfl
 
--- theorem not_hle {α: Type}[LinearOrder α] (x: WithBot α)(y: WithTop α)
+-- theorem not_hle {α : Type} [LinearOrder α] (x : WithBot α) (y : WithTop α)
 -- : ¬ x ≤∘ y → ∃ (a b: α), x = a ∧ y = b ∧ b ≤ a
 -- := by
 --   match x, y with
 --   | ⊥, _ => simp
 --   | _, ⊤ => simp
---   | (a: α), (b: α) => grind
+--   | (a : α), (b : α) => grind
 
-instance{α: Type}[LE α][ι: DecidableLE α]: DecidableRel (hle (α := α))
-| (x: α), (y: α) => ι x y
+instance {α : Type} [LE α] [ι : DecidableLE α] : DecidableRel (hle (α := α))
+| (x : α), (y : α) => ι x y
 | ⊥, _ | _, ⊤ => by simp; infer_instance
 
 instance instLeHle
-  {α: Type}[LE α]
-  [ι: Trans (LE.le (α := α)) (LE.le (α := α)) (LE.le (α := α))]
+  {α : Type} [LE α]
+  [ι : Trans (LE.le (α := α)) (LE.le (α := α)) (LE.le (α := α))]
   : Trans (LE.le (α := WithBot α)) hle hle
 where
     trans := by
         intros x y z
         match x, y, z with
         | x, ⊥, z => simp only [WithBot.le_bot_iff, hle, forall_const]; rintro rfl; dsimp
-        | x, (y: α), ⊤ => cases x <;> simp
-        | x, (y: α), (z: α) =>
+        | x, (y : α), ⊤ => cases x <;> simp
+        | x, (y : α), (z : α) =>
           cases x <;> simp [hle]
           intro h_y hyz
           apply ι.trans
@@ -50,43 +50,43 @@ where
           · apply hyz
 
 instance instHleLe
-  {α: Type}[LE α]
-  [ι: Trans (LE.le (α := α)) (LE.le (α := α)) (LE.le (α := α))]
+  {α : Type} [LE α]
+  [ι : Trans (LE.le (α := α)) (LE.le (α := α)) (LE.le (α := α))]
   : Trans hle (LE.le (α := WithTop α)) hle
 where
     trans := by
         intros x y z
         match x, y, z with
         | x, y, ⊤ => cases x <;> simp
-        | x, ⊤, (z: α) => simp
-        | x, (y: α), (z: α) =>
+        | x, ⊤, (z : α) => simp
+        | x, (y : α), (z : α) =>
           cases x <;> simp [hle]
           intro h_y hyz
           apply ι.trans
           · apply h_y
           · apply hyz
 
-def hMax {α: Type}[Max α]: WithBot α → WithTop α → WithTop α
-| (x: α), (y: α) => (x ⊔ y : α)
+def hMax {α : Type} [Max α] : WithBot α → WithTop α → WithTop α
+| (x : α), (y : α) => (x ⊔ y : α)
 | _, y => y
 
-@[simp] theorem hMax_top{α: Type}[Max α](x: WithBot α)
+@[simp] theorem hMax_top{α : Type} [Max α](x : WithBot α)
 : WithBot.hMax x ⊤ = ⊤
 := by cases x <;> rfl
 
-@[simp] theorem coe_hMax_coe{α: Type}[Max α](x y: α)
+@[simp] theorem coe_hMax_coe{α : Type} [Max α](x y: α)
 : WithBot.hMax x y = WithTop.some (x ⊔ y: α)
 := rfl
 
-def hMin {α: Type}[Min α]: WithBot α → WithTop α → WithBot α
-| (x: α), (y: α) => (x ⊓ y : α)
+def hMin {α : Type} [Min α] : WithBot α → WithTop α → WithBot α
+| (x : α), (y : α) => (x ⊓ y : α)
 | x, _ => x -- Cannot fuse with case above because they're different ⊥'s
 
-@[simp] theorem bot_hMin{α: Type}[Min α](x: WithTop α)
+@[simp] theorem bot_hMin{α : Type} [Min α](x : WithTop α)
 : WithBot.hMin ⊥ x = ⊥
 := rfl
 
-@[simp] theorem coe_hMin_coe{α: Type}[Min α](x y: α)
+@[simp] theorem coe_hMin_coe{α : Type} [Min α](x y: α)
 : WithBot.hMin x y = WithBot.some (x ⊓ y: α)
 := rfl
 
@@ -94,49 +94,49 @@ end WithBot
 
 section WithBotWithTopDefinitions
 
-def WithBot.lift₂{α: Type}(op: α × α → α): WithBot α → WithBot α → WithBot α
-| (x: α), (y : α) => op (x,y)
+def WithBot.lift₂{α : Type}(op : α × α → α): WithBot α → WithBot α → WithBot α
+| (x : α), (y : α) => op (x,y)
 | _, _ => ⊥
 
-instance: Add (WithBot Int) where
+instance : Add (WithBot Int) where
   add := .lift₂ (fun (x,y) => x + y)
 
-def WithTop.lift₂{α: Type}(op: α × α → α): WithTop α → WithTop α → WithTop α
-| (x: α), (y : α) => op (x,y)
+def WithTop.lift₂{α : Type}(op : α × α → α): WithTop α → WithTop α → WithTop α
+| (x : α), (y : α) => op (x,y)
 | _, _ => ⊤
 
-instance: Add (WithTop Int) where
+instance : Add (WithTop Int) where
   add := .lift₂ (fun (x,y) => x + y)
 
-def WithBot.neg{α : Type}[Neg α]: WithBot α → WithTop α
+def WithBot.neg{α : Type} [Neg α] : WithBot α → WithTop α
 | ⊥ => ⊤
-| (x: α) => (-x: α)
+| (x : α) => (-x: α)
 
-def WithTop.neg{α : Type}[Neg α]: WithTop α → WithBot α
+def WithTop.neg{α : Type} [Neg α] : WithTop α → WithBot α
 | ⊤  => ⊥
-| (x: α) => (-x: α)
+| (x : α) => (-x: α)
 
-instance instTopTopMul{α: Type}[Mul α]: HMul (WithTop α) (WithTop α) (WithTop α) where
+instance instTopTopMul{α : Type} [Mul α] : HMul (WithTop α) (WithTop α) (WithTop α) where
   hMul
-  | (x: α), (y: α) => (x * y : α)
+  | (x : α), (y : α) => (x * y : α)
   | ⊤, _ | _, ⊤ => ⊤
 
-instance instBotBotMul{α: Type}[Mul α]: HMul (WithBot α) (WithBot α) (WithTop α) where
+instance instBotBotMul{α : Type} [Mul α] : HMul (WithBot α) (WithBot α) (WithTop α) where
   hMul
-  | (x: α), (y: α) => (x * y : α)
+  | (x : α), (y : α) => (x * y : α)
   | ⊥, _ | _, ⊥ => ⊤
 
-instance instBotTopMul{α: Type}[Mul α]: HMul (WithBot α) (WithTop α) (WithBot α) where
+instance instBotTopMul{α : Type} [Mul α] : HMul (WithBot α) (WithTop α) (WithBot α) where
   hMul
-  | (x: α), (y: α) => (x * y : α)
+  | (x : α), (y : α) => (x * y : α)
   | ⊥, _ | _, ⊤ => ⊥
 
-instance instTopBotMul{α: Type}[Mul α]: HMul (WithTop α) (WithBot α) (WithBot α) where
+instance instTopBotMul{α : Type} [Mul α] : HMul (WithTop α) (WithBot α) (WithBot α) where
   hMul x y := y * x
 
-instance{α: Type}[ι :Zero α]: Zero (WithTop α) where zero := ι.zero
+instance {α : Type} [ι :Zero α] : Zero (WithTop α) where zero := ι.zero
 
-instance{α: Type}[ι :Zero α]: Zero (WithBot α) where zero := ι.zero
+instance {α : Type} [ι :Zero α] : Zero (WithBot α) where zero := ι.zero
 
 end WithBotWithTopDefinitions
 
@@ -148,25 +148,25 @@ deriving BEq, DecidableEq
 namespace Interval.NonEmpty
 
 @[match_pattern]
-abbrev mk(l : WithBot Int)(h: WithTop Int)(inv: l ≤∘ h): NonEmpty := ⟨(l,h),inv⟩
+abbrev mk(l : WithBot Int) (h : WithTop Int) (inv : l ≤∘ h): NonEmpty := ⟨(l,h),inv⟩
 
-instance(n: Nat): OfNat (Interval.NonEmpty) n where
-  ofNat := mk (n: Int) (n: Int) (by simp only [WithBot.coe_hle_coe, le_refl])
+instance (n : Nat): OfNat (Interval.NonEmpty) n where
+  ofNat := mk (n : Int) (n : Int) (by simp only [WithBot.coe_hle_coe, le_refl])
 
-instance: Repr NonEmpty where
+instance : Repr NonEmpty where
   reprPrec
   | ⟨(l, h), _⟩, _ =>
     let lhs := match l with
                | ⊥ => "(-∞"
-               | (l: Int) => s!"[{l}"
+               | (l : Int) => s!"[{l}"
     let rhs := match h with
                | ⊤ => "∞)"
-               | (h: Int) => s!"{h}]"
+               | (h : Int) => s!"{h}]"
     Std.Format.text s!"{lhs}, {rhs}"
 
-instance: ToString NonEmpty where toString := toString ∘ repr
+instance : ToString NonEmpty where toString := toString ∘ repr
 
-instance: LE Interval.NonEmpty where
+instance : LE Interval.NonEmpty where
   le
   | ⟨(l, h), _⟩, ⟨(l', h'), _⟩ => l' ≤ l ∧ h ≤ h'
 
@@ -178,7 +178,7 @@ theorem mk_le_mk (l l': WithBot Int) (h h': WithTop Int)
 -- :  instLE.le (⟨⟨l, h⟩,inv⟩: NonEmpty) (⟨⟨l', h'⟩, inv'⟩ : NonEmpty)
 ↔ l' ≤ l ∧ h ≤ h' := by rfl
 
-instance: Preorder Interval.NonEmpty where
+instance : Preorder Interval.NonEmpty where
   le_refl := by
     rintro ⟨⟨l, h⟩, _⟩; simp
   le_trans := by
@@ -189,7 +189,7 @@ instance: Preorder Interval.NonEmpty where
     · trans <;> assumption
     · trans <;> assumption
 
-instance: PartialOrder Interval.NonEmpty where
+instance : PartialOrder Interval.NonEmpty where
   le_antisymm := by
     rintro ⟨⟨l, h⟩, _⟩ ⟨⟨l, h⟩, _⟩
     simp only [mk_le_mk]
@@ -199,7 +199,7 @@ instance: PartialOrder Interval.NonEmpty where
     · apply le_antisymm <;> assumption
     · apply le_antisymm <;> assumption
 
-instance: Top Interval.NonEmpty where
+instance : Top Interval.NonEmpty where
   top := ⟨(⊥, ⊤), WithBot.bot_hle _⟩
 
 def join: NonEmpty → NonEmpty → NonEmpty
@@ -218,7 +218,7 @@ def join: NonEmpty → NonEmpty → NonEmpty
         _ ≤  l  := by have := Std.IsLinearOrder.le_total l l'; grind
 }
 
-instance: SemilatticeSup Interval.NonEmpty where
+instance : SemilatticeSup Interval.NonEmpty where
   sup := join
   le_sup_left x y := by
     fun_cases (x.join y)
@@ -234,20 +234,20 @@ instance: SemilatticeSup Interval.NonEmpty where
     simp only [mk_le_mk, le_inf_iff, sup_le_iff, and_imp]
     grind
 
-instance: OrderTop Interval.NonEmpty where
+instance : OrderTop Interval.NonEmpty where
   le_top := by
     rintro ⟨⟨l, h⟩, inv⟩
     dsimp [instLE]
     constructor <;> simp only [le_top, bot_le]
 
-instance {α: Type}[Sub α]: HSub (WithTop α) (WithBot α) (WithTop α) where
+instance {α : Type} [Sub α] : HSub (WithTop α) (WithBot α) (WithTop α) where
   hSub
-  | (x: α), (y: α) => x - y
+  | (x : α), (y : α) => x - y
   | _, _ => ⊤
 
-instance {α: Type}[Sub α]: HSub (WithBot α) (WithTop α) (WithBot α) where
+instance {α : Type} [Sub α] : HSub (WithBot α) (WithTop α) (WithBot α) where
   hSub
-  | (x: α), (y: α) => x - y
+  | (x : α), (y : α) => x - y
   | _, _ => ⊥
 
 def add: NonEmpty → NonEmpty → NonEmpty
@@ -256,42 +256,42 @@ def add: NonEmpty → NonEmpty → NonEmpty
     property := by
       dsimp at yinv xinv ⊢
       match xl, xh, yl, yh with
-      | (xl: Int), (xh: Int), (yl: Int), (yh: Int) =>
+      | (xl : Int), (xh : Int), (yl : Int), (yh : Int) =>
         dsimp only [HAdd.hAdd]
         dsimp only [Add.add, WithBot.lift₂, WithTop.lift₂] at xinv yinv ⊢
         grind [WithBot.hle] -- HERE
       | ⊥, _, _, _
-      | (_: Int), _, ⊥, _ =>
+      | (_ : Int), _, ⊥, _ =>
         dsimp only [HAdd.hAdd]
         dsimp only [Add.add, WithBot.lift₂]
         apply WithBot.bot_hle
       | _, ⊤, _, _
-      | _, (_: Int), _, ⊤ =>
+      | _, (_ : Int), _, ⊤ =>
         dsimp only [HAdd.hAdd]
         dsimp only [Add.add, WithTop.lift₂]
         apply WithBot.hle_top
   }
 
-instance: Add NonEmpty where add := add
+instance : Add NonEmpty where add := add
 
 def neg: NonEmpty → NonEmpty
 | .mk l h o => .mk h.neg l.neg <| by
   match l, h with
   | ⊥, _ | _, ⊤ =>
     simp only [WithTop.neg, WithBot.neg, WithBot.hle_top, WithBot.bot_hle]
-  | (l: Int), (h: Int) =>
+  | (l : Int), (h : Int) =>
     simpa only [WithTop.neg, WithBot.neg, WithBot.coe_hle_coe, Int.neg_le_neg_iff, ge_iff_le]
 
-instance: Neg NonEmpty where neg := neg
+instance : Neg NonEmpty where neg := neg
 
 def sub: NonEmpty → NonEmpty → NonEmpty
 | ⟨(xl,xh),xinv⟩, ⟨(yl,yh), yinv⟩ => {
   val := (xl - yh, xh - yl),
   property := by
     match xl, yh with
-    | (xl: Int), (yh: Int) =>
+    | (xl : Int), (yh : Int) =>
       match xh, yl with
-      | (xh: Int), (yh: Int) =>
+      | (xh : Int), (yh : Int) =>
         simp only [WithBot.hle] at xinv yinv ⊢
         grind
       | ⊤, _
@@ -301,7 +301,7 @@ def sub: NonEmpty → NonEmpty → NonEmpty
       simp only [HSub.hSub, WithBot.bot_hle]
 }
 
-instance: Sub NonEmpty where sub := sub
+instance : Sub NonEmpty where sub := sub
 
 def mul: NonEmpty → NonEmpty → NonEmpty
 | ⟨(xl,xh), xinv⟩, ⟨(yl,yh),yinv⟩ =>
@@ -316,7 +316,7 @@ def mul: NonEmpty → NonEmpty → NonEmpty
     property := by
       dsimp only [ll, hh, lh, hl]
       match xl, xh, yl, yh with
-      | (xl: Int), (xh: Int), (yl: Int), (yh: Int) =>
+      | (xl : Int), (xh : Int), (yl : Int), (yh : Int) =>
         dsimp only [instTopTopMul, instBotBotMul, instBotTopMul, instTopBotMul]
         dsimp only [Min.min, SemilatticeInf.inf, WithBot.map₂_coe_coe]
         dsimp only [Max.max, SemilatticeSup.sup, WithTop.map₂_coe_coe]
@@ -327,7 +327,7 @@ def mul: NonEmpty → NonEmpty → NonEmpty
       | ⊥, _, _, _
       | _, ⊤, _, _
       | _, _, ⊥, _
-      | _, (_: Int), _, ⊤ =>
+      | _, (_ : Int), _, ⊤ =>
         simp only [HMul.hMul,
           min_bot_left, min_bot_right,
           max_top_left, max_top_right,
@@ -336,7 +336,7 @@ def mul: NonEmpty → NonEmpty → NonEmpty
         ]
   }
 
-instance: Mul NonEmpty where mul := mul
+instance : Mul NonEmpty where mul := mul
 
 end Interval.NonEmpty
 
@@ -347,25 +347,25 @@ deriving LE, Repr, Bot, Top, SemilatticeSup, OrderTop,
 namespace Interval
 
 @[match_pattern]
-abbrev mk(low: WithBot Int)(high: WithTop Int)(h: low ≤∘ high): Interval :=
+abbrev mk(low : WithBot Int) (high : WithTop Int) (h : low ≤∘ high): Interval :=
   NonEmpty.mk low high h
 
-@[grind] instance: EmptyCollection Interval where emptyCollection := ⊥
-@[grind] instance: Top Interval where top := mk ⊥ ⊤ (WithBot.hle_top _)
+@[grind] instance : EmptyCollection Interval where emptyCollection := ⊥
+@[grind] instance : Top Interval where top := mk ⊥ ⊤ (WithBot.hle_top _)
 
 @[cases_eliminator, elab_as_elim]
-def recOpenClose{motive: Interval → Sort _}
-  (empty: motive ⊥)
-  (nonempty: ∀ (int: Interval.NonEmpty), motive (int : WithBot _))
-  (int: Interval)
+def recOpenClose{motive : Interval → Sort _}
+  (empty : motive ⊥)
+  (nonempty : ∀ (int : Interval.NonEmpty), motive (int : WithBot _))
+  (int : Interval)
 : motive int
 := match int with
   | ⊥ => empty
-  | (int: NonEmpty) => nonempty int
+  | (int : NonEmpty) => nonempty int
 
 section Domain
 
-def ofPair(x: WithBot Int)(y: WithTop Int): Interval :=
+def ofPair(x : WithBot Int) (y : WithTop Int): Interval :=
   if h : x ≤∘ y then
     .mk x y h
   else ⊥
@@ -377,7 +377,7 @@ def meet: Interval → Interval → Interval
   ofPair (h ⊔ h') (l ⊓ l')
 | _, _ => ⊥
 
-instance: Min Interval where min := meet
+instance : Min Interval where min := meet
 
 theorem meet_commutative (x y : Interval) : x ⊓ y = y ⊓ x := by
   dsimp [Min.min]
@@ -391,7 +391,7 @@ theorem meet_commutative (x y : Interval) : x ⊓ y = y ⊓ x := by
 theorem inf_le_left (x y : Interval): x ⊓ y ≤ x := by
     match x, y with
     | ⊥, _
-    | (_: NonEmpty), ⊥ => dsimp [Min.min, meet]; constructor
+    | (_ : NonEmpty), ⊥ => dsimp [Min.min, meet]; constructor
     | .mk l h inv, .mk l' h' inv' =>
       dsimp only [min]
       simp only [meet, ofPair]
@@ -400,7 +400,7 @@ theorem inf_le_left (x y : Interval): x ⊓ y ≤ x := by
         simp only [NonEmpty.mk_le_mk, le_sup_left, _root_.inf_le_left, and_self]
       · constructor
 
-instance: SemilatticeInf Interval where
+instance : SemilatticeInf Interval where
   inf := Min.min
   inf_le_left := inf_le_left
   inf_le_right x y := meet_commutative _ _ ▸ inf_le_left y x
@@ -433,51 +433,51 @@ instance: SemilatticeInf Interval where
     | ⊥, _, _
     | .mk l h inv, ⊥, _ => intros; simpa
 
-instance: Lattice Interval where
+instance : Lattice Interval where
 
 end Domain
 
 section Operators
 
 def add: Interval → Interval → Interval
-| (x: NonEmpty), (y: NonEmpty) => x + y
+| (x : NonEmpty), (y : NonEmpty) => x + y
 | ⊥, _ | _, ⊥ => ⊥
 
 instance : Add (Interval) where add := add
 
 def neg: Interval → Interval
-| (x: NonEmpty) => (- x: NonEmpty)
+| (x : NonEmpty) => (- x: NonEmpty)
 | ⊥ => ⊥
 
 instance : Neg Interval where neg := neg
 
 def sub : Interval → Interval → Interval
-| (x: NonEmpty), (y: NonEmpty) => x - y
+| (x : NonEmpty), (y : NonEmpty) => x - y
 | ⊥, other => -other
 | other, ⊥ =>  other
 
 instance : Sub Interval where sub := sub
 
 def mul: Interval → Interval → Interval
-| (x: NonEmpty), (y: NonEmpty) => (x * y: NonEmpty)
+| (x : NonEmpty), (y : NonEmpty) => (x * y: NonEmpty)
 | ⊥, _ | _, ⊥ => ⊥
 
-instance: Mul Interval where mul := mul
+instance : Mul Interval where mul := mul
 
 def divPos: Interval → Interval → Interval
 | .mk _ xh _, .mk _ yh _ =>
   match xh, yh with
-  | _, (0: Int) => ⊥
+  | _, (0 : Int) => ⊥
   | ⊤, _ => .mk 0 ⊤ (WithBot.hle_top 0)
-  | _, ⊤ => (0: NonEmpty)
-  | (x: Int), (y: Int) =>
+  | _, ⊤ => (0 : NonEmpty)
+  | (x : Int), (y : Int) =>
     if hyp: 0 ≤ x / y then
       .mk 0 (x / y) hyp
     else
       ⊥
 | ⊥, _ | _, ⊥ => ⊥
 
-def NonEmpty.splitAt (n: Int): NonEmpty → Interval × Interval
+def NonEmpty.splitAt (n : Int): NonEmpty → Interval × Interval
 | ⟨(xl,xh),xinv⟩ =>
   if h: xl ≤∘ n ∧ n ≤∘ xh then
     have ⟨hl, hh⟩ := h
@@ -488,7 +488,7 @@ def NonEmpty.splitAt (n: Int): NonEmpty → Interval × Interval
     (mk xl xh xinv, ⊥)
 
 def div: Interval → Interval → Interval
-| (x: NonEmpty), (y: NonEmpty) =>
+| (x : NonEmpty), (y : NonEmpty) =>
   let (x1, x2) := x.splitAt 0
   let (y1, y2) := y.splitAt 0
   (  ( x2).divPos ( y2))  ⊔
@@ -497,21 +497,21 @@ def div: Interval → Interval → Interval
   (  (-x1).divPos (-y1))
 | ⊥, _ | _, ⊥ => ⊥
 
-instance: Div Interval where div := div
+instance : Div Interval where div := div
 
-instance: ToString Interval where toString
+instance : ToString Interval where toString
 | ⊥ => "∅"
 | .mk ⊥ ⊤ _ =>               s!"(-∞, ∞)"
-| .mk (x: Int) ⊤ _ =>        s!"[{x}, ∞)"
-| .mk ⊥ (y: Int) _ =>        s!"(-∞, {y}]"
-| .mk (x: Int) (y: Int) _ => s!"[{x}, {y}]"
+| .mk (x : Int) ⊤ _ =>        s!"[{x}, ∞)"
+| .mk ⊥ (y : Int) _ =>        s!"(-∞, {y}]"
+| .mk (x : Int) (y : Int) _ => s!"[{x}, {y}]"
 
 end Operators
 
-private def _root_.List.tighestLowerBound(cts: List Int)(n: WithBot Int): WithBot Int :=
-  (cts.filter (fun x => ↑(x: Int) ≤ n)).min?
+private def _root_.List.tighestLowerBound(cts : List Int) (n : WithBot Int): WithBot Int :=
+  (cts.filter (fun x => ↑(x : Int) ≤ n)).min?
 
-private def _root_.List.tighestLowerBound.spec (cts: List Int)(n: WithBot Int)
+private def _root_.List.tighestLowerBound.spec (cts : List Int) (n : WithBot Int)
 : cts.tighestLowerBound n ≤ n
 := by
   dsimp [List.tighestLowerBound]
@@ -519,21 +519,21 @@ private def _root_.List.tighestLowerBound.spec (cts: List Int)(n: WithBot Int)
   have mem_ls: ∀ z ∈ ls, z ≤ n := by grind
   match ls with
   | [] =>
-    have: none = (⊥: WithBot Int) := rfl
+    have: none = (⊥ : WithBot Int) := rfl
     grind [bot_le, List.min?]
   | x :: xs =>
     rw [List.min?_eq_some_min (by grind only)]
     apply mem_ls
     apply List.min_mem
 
-local instance: Std.LawfulOrderLeftLeaningMax Int where
+local instance : Std.LawfulOrderLeftLeaningMax Int where
   max_eq_left := by grind
   max_eq_right := by grind
 
-private def _root_.List.tighestUpperBound(cts: List Int)(n: WithTop Int): WithTop Int :=
-  (cts.filter (fun x => n ≤ ↑(x: Int))).max?
+private def _root_.List.tighestUpperBound(cts : List Int) (n : WithTop Int): WithTop Int :=
+  (cts.filter (fun x => n ≤ ↑(x : Int))).max?
 
-private def _root_.List.tighestUpperBound.spec (cts: List Int)(n: WithTop Int)
+private def _root_.List.tighestUpperBound.spec (cts : List Int) (n : WithTop Int)
 : n ≤ cts.tighestUpperBound n
 := by
   dsimp [List.tighestUpperBound]
@@ -541,14 +541,14 @@ private def _root_.List.tighestUpperBound.spec (cts: List Int)(n: WithTop Int)
   have mem_ls: ∀ z ∈ ls, n ≤ z := by grind
   match ls with
   | [] =>
-    have: none = (⊤: WithTop Int) := rfl
+    have: none = (⊤ : WithTop Int) := rfl
     grind [le_top, List.max?]
   | x :: xs =>
     rw [List.max?_eq_some_max (by grind only)]
     apply mem_ls
     apply List.max_mem
 
-def widen (cts: List Int) (limit : Nat) (x y : Interval) (n : Nat): Interval :=
+def widen (cts : List Int) (limit : Nat) (x y : Interval) (n : Nat): Interval :=
   if n <= limit then
     x ⊔ y
   else
@@ -568,7 +568,7 @@ def widen (cts: List Int) (limit : Nat) (x y : Interval) (n : Nat): Interval :=
       .mk zl zh zinv
     | ⊥, other | other, ⊥ =>  other
 
-def Interval.instWidenLawfulOfConstantsAndLimit(cts: List Int)(limit: Nat): WidenLawful Interval where
+def instWidenLawfulOfConstantsAndLimit (cts : List Int) (limit : Nat) : WidenLawful Interval where
   widen := widen (cts := cts) (limit := limit)
   covering_left x y n := by
     simp only [BoundedLattice.IsSubset, left_eq_inf]
@@ -606,7 +606,7 @@ def Interval.instWidenLawfulOfConstantsAndLimit(cts: List Int)(limit: Nat): Wide
         · assumption
         · apply List.tighestUpperBound.spec
 
-def narrow (x y : Interval)(_: Nat): Interval := x ⊓ y
+def narrow (x y : Interval) (_ : Nat): Interval := x ⊓ y
 
 instance : NarrowLawful (Interval) where
   narrow := narrow
@@ -621,10 +621,10 @@ def refineLe: NonEmpty → NonEmpty → Interval
   ofPair xl (xl ⊓ yh)
 
 def refineLt: NonEmpty → NonEmpty → Interval
-| x, y => (refineLe (x + 1) y) - ↑(1: NonEmpty)
+| x, y => (refineLe (x + 1) y) - ↑(1 : NonEmpty)
 
 def refine (op : CompareOp): Interval → Interval → Interval
-| (x: NonEmpty), (y: NonEmpty) =>
+| (x : NonEmpty), (y : NonEmpty) =>
   match op with
   | .eq  => refineEq x y
   | .lt  => refineLt x y
@@ -634,10 +634,10 @@ def refine (op : CompareOp): Interval → Interval → Interval
   | .ge  => refineLe y x
 | ⊥, _ | _, ⊥ => ⊥
 
-instance: BoundedLattice Interval := BoundedLattice.ofLatticeAndBoundedOrder
+instance : BoundedLattice Interval := BoundedLattice.ofLatticeAndBoundedOrder
 
-def ofConstantsAndLimit(cts: List Int := [])(limit : Nat := 10): ValueDomain Interval :=
-  have : WidenLawful Interval := Interval.instWidenLawfulOfConstantsAndLimit
+def ofConstantsAndLimit (cts : List Int := []) (limit : Nat := 10) : ValueDomain Interval :=
+  have : WidenLawful Interval := instWidenLawfulOfConstantsAndLimit
     (cts := cts) (limit := limit)
   {
     nil := ⊤ -- we have no better approximation for nil in this domain than ⊤

@@ -7,7 +7,7 @@ structure Undefined (α : Type) : Type where
   deriving Repr, Inhabited, DecidableEq, BEq
 
 namespace Undefined
-variable {α : Type} [BEq α][ι : ValueDomain α] (x y z : Undefined α)
+variable {α : Type} [BEq α] [ι : ValueDomain α] (x y z : Undefined α)
 
 protected def add : Undefined α := .mk (x.val + y.val) (x.may_be_nil || y.may_be_nil)
 protected def neg : Undefined α := .mk (-x.val) (x.may_be_nil)
@@ -33,13 +33,13 @@ instance : ToString (Undefined α) where
   toString := Undefined.toString
 
 def bot : Undefined α := .mk ⊥ false
-instance: Bot (Undefined α) where bot := bot
+instance : Bot (Undefined α) where bot := bot
 def top : Undefined α := .mk ⊤ true
-instance: Top (Undefined α) where top := top
+instance : Top (Undefined α) where top := top
 def meet : Undefined α := .mk (x.val ⊓ y.val) (x.may_be_nil && y.may_be_nil)
-instance: Min (Undefined α) where min := meet
+instance : Min (Undefined α) where min := meet
 def join : Undefined α := .mk (x.val ⊔ y.val) (x.may_be_nil || y.may_be_nil)
-instance: Max (Undefined α) where max := join
+instance : Max (Undefined α) where max := join
 
 theorem join_commutative : x ⊔ y = y ⊔ x := by
   dsimp [Max.max]; dsimp [join]

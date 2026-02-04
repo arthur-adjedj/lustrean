@@ -65,7 +65,7 @@ deriving Repr, Inhabited
 
 
 namespace CompareOp
-def toProp{α: Type}[LT α][LE α](ord: CompareOp)(x y: α): Prop :=
+def toProp{α : Type} [LT α] [LE α](ord : CompareOp) (x y: α): Prop :=
   match ord with
   | eq  => x = y
   | neq => x ≠ y
@@ -164,7 +164,7 @@ structure PreNode (nb_var : Nat) : Type where
   out_nodes : List (OutNode nb_var)
   deriving Repr, Inhabited
 
-def PreNode.toDot{nb_var: Nat}(curr: PreNode nb_var): List Std.Format :=
+def PreNode.toDot{nb_var : Nat}(curr : PreNode nb_var): List Std.Format :=
   curr.out_nodes
     |>.map (fun neigh =>
       Std.format curr.id ++ " -> " ++ Std.format neigh.out_node ++ " " ++ "[label=\"" ++ Std.format neigh.out_inst ++ "\"]"

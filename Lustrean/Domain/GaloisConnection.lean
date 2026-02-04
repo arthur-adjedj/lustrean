@@ -3,7 +3,7 @@ import Mathlib.Order.GaloisConnection.Defs
 /-!
 # Galois Connection
 
-See [wikipedia](https://en.wikipedia.org/wiki/Galois_connection).
+See [wikipedia](https ://en.wikipedia.org/wiki/Galois_connection).
 
 A Galois connection between two partially ordered sets A and C
 (called respectively _abstract domain_ and _concrete domain_)
@@ -30,29 +30,29 @@ We take the Galois connection definition from Mathlib, and make
 new definitions here which are specific to its use in abstract
 interpretation.
 -/
-variable {A C: Type}[PartialOrder A][PartialOrder C]{γ: A → C}{α: C → A}
+variable {A C: Type} [PartialOrder A] [PartialOrder C]{γ : A → C}{α : C → A}
 
 namespace GaloisConnection
 
 /-- A function `g` is an abstraction of `f` if it the concretization
 of its outputs contain the result of concretizing its inputs. In short,
 if it is sound. -/
-abbrev IsAbstraction (_gc: GaloisConnection α γ)(f: C → C) (g: A → A) :=
+abbrev IsAbstraction (_gc : GaloisConnection α γ) (f : C → C) (g : A → A) :=
   ∀ a, f (γ a) ≤ γ (g a)
 
 /-- A function `g` is an abstraction of `f` if it is a natural
 transformation (when seeing the concretization and abstraction
 functions as functors between preorders). In short, if it is
 sound and complete. -/
-abbrev IsBestAbstraction (_gc: GaloisConnection α γ)(f: C → C) (g: A → A) :=
+abbrev IsBestAbstraction (_gc : GaloisConnection α γ) (f : C → C) (g : A → A) :=
   ∀ a, f (γ a) = γ (g a)
 
 @[inherit_doc IsAbstraction]
-abbrev IsBinAbstraction (_gc: GaloisConnection α γ)(f: C → C → C) (g: A → A → A) :=
+abbrev IsBinAbstraction (_gc : GaloisConnection α γ) (f : C → C → C) (g : A → A → A) :=
   ∀ a a', f (γ a) (γ a') ≤ γ (g a a')
 
 @[inherit_doc IsBestAbstraction]
-abbrev IsBestBinAbstraction(_gc: GaloisConnection α γ) (f: C → C → C) (g: A → A → A) :=
+abbrev IsBestBinAbstraction(_gc : GaloisConnection α γ) (f : C → C → C) (g : A → A → A) :=
   ∀ a a', f (γ a) (γ a') = γ (g a a')
 
 end GaloisConnection
@@ -65,4 +65,4 @@ if the concretization of two abstract elements are related in
 a concrete domain of a Galois embedding, they are related in
 the abstract domain. This can be useful in proofs, since it's
 easier to reason in the concrete domain.  -/
-abbrev GaloisEmbedding(γ: A → C)(α: C → A) := GaloisInsertion γ α
+abbrev GaloisEmbedding(γ : A → C) (α : C → A) := GaloisInsertion γ α

@@ -29,7 +29,7 @@ instance : BoundedLattice (NonRelational α n) where
         split at yz; case isFalse => simp only [reduceCtorEq] at yz
         rename_i h'
         simp only [non_rel.injEq, Subtype.mk.injEq] at xz yz
-        have := fun (i: Fin (n+1)) => BoundedLattice.join_is_lub (x[i.val]) (y[i.val]) env.val[i.val]
+        have := fun (i : Fin (n+1)) => BoundedLattice.join_is_lub (x[i.val]) (y[i.val]) env.val[i.val]
           (by grind) (by grind)
         have next_cond: ∀ (i : Fin (n + 1)), ¬ (x[i.val] ⊔ y[i.val]) ⊓ env.val[i.val] = ⊥
         := by
@@ -63,7 +63,7 @@ instance : BoundedLattice (NonRelational α n) where
     split at yz; case isFalse => simp only [reduceCtorEq] at yz
     rename_i hy
     simp only [non_rel.injEq, Subtype.mk.injEq, Fin.getElem_fin] at xz yz
-    have := fun (i: Fin (n+1)) => BoundedLattice.meet_is_glb (x[i.val]) (y[i.val]) z[i.val]
+    have := fun (i : Fin (n+1)) => BoundedLattice.meet_is_glb (x[i.val]) (y[i.val]) z[i.val]
       (by grind) (by grind)
     simp only [Meet.meet, meet, map2Nil, coalesce]
     have cond₁: ∀ (i : Fin (n + 1)), ¬ x[i.val] ⊓ y[i.val] = ⊥

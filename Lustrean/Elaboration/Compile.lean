@@ -79,20 +79,20 @@ def addExitNode {nod} : ResultM nod Unit := do
 def unrollLoop : Nat := 1
 
 def elabResult (nod : Normalize.Node) : ResultM nod Unit := do
-  for h : i in [0:nod.m] do
+  for h : i in [0 :nod.m] do
     let k := Fin.mk' i
     addNewPreNodeOutNext (.assign (bound_var k) .nil)
   let unrolled_loop := do
-    for h : i in [0:nod.m] do
+    for h : i in [0 :nod.m] do
       let k := Fin.mk' i
       addNewPreNodeOutNext (.assign (old_bound_var k) (.var <| bound_var k))
-    for h : i in [0:nod.n] do
+    for h : i in [0 :nod.n] do
       let k := Fin.mk' i
       addNewPreNodeOutNext (.assign (input_var k) (.rand none none))
     for g in nod.guards do
       addNewPreNodeOutNext (.guard g.to_cfg_expr)
     let there_id ← getNextId
-    for h : i in [0:nod.m] do
+    for h : i in [0 :nod.m] do
       let k := Fin.mk' i
       match nod.bound_vars[i].value with
       | .simple e =>
@@ -114,23 +114,23 @@ def elabResult (nod : Normalize.Node) : ResultM nod Unit := do
         { out_node := next_id + 1, out_inst := .assign step (.binop (.var step) .iadd (IExpr.const 1))} -- next iteration
     ]
     addNewPreNode out_nodes
-  for _ in [0:unrollLoop] do
+  for _ in [0 :unrollLoop] do
     unrolled_loop
   let here_id ← getNextId
-  for h : i in [0:nod.m] do
+  for h : i in [0 :nod.m] do
     let k := Fin.mk' i
     addNewPreNodeOutNext (.assign (old_bound_var k) (.var <| bound_var k))
-  for h : i in [0:nod.n] do
+  for h : i in [0 :nod.n] do
     let k := Fin.mk' i
     addNewPreNodeOutNext (.assign (input_var k) (.rand none none))
   for g in nod.guards do
     addNewPreNodeOutNext (.guard g.to_cfg_expr)
   -- Why were we reinitialising bvars each loop cycle ??
-  -- for h : i in [0:nod.m] do
+  -- for h : i in [0 :nod.m] do
     -- let k := Fin.mk' i
     -- addNewPreNodeOutNext (.assign (bound_var k) .nil)
   let there_id ← getNextId
-  for h : i in [0:nod.m] do
+  for h : i in [0 :nod.m] do
     let k := Fin.mk' i
     match nod.bound_vars[i].value with
     | .simple e =>
@@ -163,7 +163,7 @@ structure Node where
   outputVars : Array &(Fin totalVars)
 deriving Repr, Inhabited
 
-def Node.toDot(nod: Node): Std.Format :=
+def Node.toDot(nod : Node): Std.Format :=
   let outVars := nod.outputVars.toList
     |>.map (λ i ↦ Std.format i ++ " [peripheries=2]")
   let edges := nod.cfg.toList

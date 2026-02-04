@@ -7,17 +7,17 @@ namespace Lustrean
   Given an abstract domain `α` over values `C`, constructs a
   non-relational abstract domain of `Set C`.
 -/
-inductive NonRelational (α : Type) [BEq α][ValueDomain α]: Nat → Type where
+inductive NonRelational (α : Type) [BEq α] [ValueDomain α] : Nat → Type where
 -- NOTE↓: Formulate the property in simp-normal form
-| non_rel {n: Nat}(env : { env : Vector α (n+1) // ∀ i : Fin (n+1), ¬ env[i.val] = ⊥ }) : NonRelational α (n+1)
-| bot {n: Nat}: NonRelational α n
+| non_rel {n : Nat}(env : { env : Vector α (n+1) // ∀ i : Fin (n+1), ¬ env[i.val] = ⊥ }) : NonRelational α (n+1)
+| bot {n : Nat}: NonRelational α n
 
 namespace NonRelational
 
 variable {α : Type} {n : Nat} [BEq α]
 variable [ι : ValueDomain α]
 
-instance: Bot (NonRelational α n) where bot := .bot
+instance : Bot (NonRelational α n) where bot := .bot
 
 instance : BEq (NonRelational α n) where
   beq
@@ -37,12 +37,12 @@ def coalesce (env : Vector α n) : NonRelational α n :=
   match n with
   | 0 => .bot
   | m+1 =>
-    if H: ∀ (i: Fin (m+1)), env[i] ≠ ⊥ then
+    if H: ∀ (i : Fin (m+1)), env[i] ≠ ⊥ then
       .non_rel ⟨env, H⟩
     else
       .bot
 
-def mapNil (x: NonRelational α n)(f : Vector α n → Vector α n) : NonRelational α n :=
+def mapNil (x : NonRelational α n) (f : Vector α n → Vector α n) : NonRelational α n :=
   match x with
   | .non_rel x => coalesce <| f x.val
   | .bot => .bot
@@ -102,14 +102,14 @@ def join : NonRelational α n := match x, y with
       apply x_prop i
       grind)
   | .bot, z | z, .bot => z
-instance: Join (NonRelational α n) where join := join
+instance : Join (NonRelational α n) where join := join
 
 def meet : NonRelational α n := map2Nil x y fun x y => Vector.ofFn fun i => x[i] ⊓ y[i]
-instance: Meet (NonRelational α n) where meet := meet
+instance : Meet (NonRelational α n) where meet := meet
 end ops
 
 def top : NonRelational α n :=
-  if h: (⊤: α) = (⊥: α) then
+  if h: (⊤ : α) = (⊥ : α) then
     .bot
   else
     match n with
@@ -118,7 +118,7 @@ def top : NonRelational α n :=
       .non_rel ⟨Vector.replicate _ ⊤, by
         simp [Vector.getElem_replicate, h]⟩
 
-instance: Top (NonRelational α n) where top := top
+instance : Top (NonRelational α n) where top := top
 
 end NonRelational
 end Lustrean

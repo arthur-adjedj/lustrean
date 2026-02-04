@@ -7,12 +7,12 @@ namespace Lustrean
 class Join α where
   join : α → α → α
 export Join (join)
-instance{α: Type}[Join α]: Max α where max := Join.join
+instance {α : Type} [Join α] : Max α where max := Join.join
 
 class Meet α where
   meet : α → α → α
 export Meet (meet)
-instance{α: Type}[Meet α]: Min α where min := Meet.meet
+instance {α : Type} [Meet α] : Min α where min := Meet.meet
 
 class BoundedLattice (α : Type) extends Bot α, Top α, Meet α, Join α where
   join_commutative : ∀ (x y : α), x ⊔ y = y ⊔ x
@@ -31,7 +31,7 @@ class BoundedLattice (α : Type) extends Bot α, Top α, Meet α, Join α where
   -- join gives the lowest upper bound. Same with meet giving the greatest
   -- lower bound. Do we want to include these restrictions?
 
-def BoundedLattice.ofLatticeAndBoundedOrder {α: Type}[Lattice α][BoundedOrder α] : BoundedLattice α where
+def BoundedLattice.ofLatticeAndBoundedOrder {α : Type} [Lattice α] [BoundedOrder α] : BoundedLattice α where
   bot := ⊥
   top := ⊤
   join x y := x ⊔ y
@@ -59,7 +59,7 @@ meet_associative meet_absorption meet_bot meet_top
 def IsBot : α → Prop :=
   (· = ⊥)
 
-def IsSubset {α: Type}[Min α]: α → α → Prop :=
+def IsSubset {α : Type} [Min α] : α → α → Prop :=
   fun x y => x = x ⊓ y
 
 infixr:50 " ⊑ " => IsSubset
@@ -136,12 +136,12 @@ theorem meet_not_bot_right : ∀ {x y : α}, x ⊓ y ≠ ⊥ → y ≠ ⊥ := by
   rw [Hc]
   simp
 
-instance [DecidableEq α] : DecidablePred (IsBot: α → Prop) := by
+instance [DecidableEq α] : DecidablePred (IsBot : α → Prop) := by
   rename_i ι'
   intros _
   apply ι'
 
-instance [DecidableEq α] : DecidableRel (IsSubset: α → α → Prop) := by
+instance [DecidableEq α] : DecidableRel (IsSubset : α → α → Prop) := by
   rename_i ι'
   intros _ _
   apply ι'
@@ -200,7 +200,7 @@ theorem meet_min_right : ∀ {x y : α}, x ⊓ y ⊑ y := by
   apply meet_min_left
 
 theorem trivial_of_top_eq_bot
-  (h: (⊤: α) = ⊥)(x: α)
+  (h : (⊤ : α) = ⊥) (x : α)
 : x = ⊥
 := calc x
    _ = x ⊓ ⊤ := by rw [meet_top]
@@ -208,18 +208,18 @@ theorem trivial_of_top_eq_bot
    _ = ⊥     := by rw [meet_bot]
 
 instance (priority := low)
-  {α: Type}[LE α][Std.IsPreorder α]: Preorder α where
+  {α : Type} [LE α] [Std.IsPreorder α] : Preorder α where
   le_refl := Std.IsPreorder.le_refl
   le_trans := Std.IsPreorder.le_trans
 
-instance(priority := low)
-  {α: Type}[LE α][Std.IsPartialOrder α]: PartialOrder α where
+instance (priority := low)
+  {α : Type} [LE α] [Std.IsPartialOrder α] : PartialOrder α where
   le_antisymm := Std.IsPartialOrder.le_antisymm
 
-instance: Std.IsPartialOrder α where
+instance : Std.IsPartialOrder α where
   le_antisymm := by simp [LE.le]; apply antisymm
 
-instance: SemilatticeSup α where
+instance : SemilatticeSup α where
   sup := Max.max
   le_sup_left := by simp [LE.le, IsSubset]
   le_sup_right x y := by simp [LE.le, IsSubset, join_commutative x, meet_absorption]
@@ -227,7 +227,7 @@ instance: SemilatticeSup α where
     simp only [LE.le, IsSubset]
     apply join_is_lub
 
-instance: SemilatticeInf α where
+instance : SemilatticeInf α where
   le := instBoundedLatticeLE.le
   le_refl := Std.IsPreorder.le_refl
   le_trans := Std.IsPreorder.le_trans
@@ -242,7 +242,7 @@ instance: SemilatticeInf α where
     simp only [LE.le, IsSubset]
     apply meet_is_glb
 
-instance: Lattice α where
+instance : Lattice α where
 
 /- Alternative definition -/
 def other : Lattice α := Lattice.mk'
@@ -253,13 +253,13 @@ def other : Lattice α := Lattice.mk'
   (sup_inf_self := join_absorption)
   (inf_sup_self := meet_absorption)
 
-instance: OrderTop α where
+instance : OrderTop α where
   le_top := by simp [LE.le, IsSubset]
 
-instance: OrderBot α where
+instance : OrderBot α where
   bot_le x := by simp [LE.le, IsSubset, ←meet_commutative x, meet_bot]
 
-instance: BoundedOrder α where
+instance : BoundedOrder α where
 
 end BoundedLattice
 
@@ -299,14 +299,14 @@ def narrowSeq (x : Nat → α) (n : Nat) : α := match n with
   | .succ n => Narrow.narrow (narrowSeq x n) (x n.succ) n
 end Narrow
 
-class NarrowLawful (α : Type)[Min α]
+class NarrowLawful (α : Type) [Min α]
 extends Narrow α
 where
   bounding_low : ∀  (x y : α) (n : Nat), (x ⊓ y) ⊑ (narrow x y n)
   bounding_high : ∀  (x y : α) (n : Nat), (narrow x y n) ⊑ x
   -- trust Adrien for termination
 
-class Domain (α : Type)[BEq α]
+class Domain (α : Type) [BEq α]
 extends BoundedLattice α, ToString α,
   WidenLawful α, NarrowLawful α
 where
@@ -317,6 +317,6 @@ where
   assign : α → Fin nb_var → IExpr nb_var → α
 export Domain (guard assign)
 
-instance (α : Type) [BEq α][ι: Domain α] : DecidablePred (· = (⊥ : α)) := ι.dec_bot
+instance (α : Type) [BEq α] [ι : Domain α] : DecidablePred (· = (⊥ : α)) := ι.dec_bot
 
 end Lustrean

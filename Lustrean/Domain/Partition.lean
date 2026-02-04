@@ -4,7 +4,7 @@ import Lustrean.Domain.GaloisConnection
 namespace Lustrean
 
 variable {D₀ D₁: Type} [BEq D₀] [Hashable D₀]
-         [ι₀: ValueDomain D₀] [ι₁: ValueDomain D₁]
+         [ι₀ : ValueDomain D₀] [ι₁ : ValueDomain D₁]
 
 def Partition (D₀ D₁: Type) [BEq D₀] [Hashable D₀]
 := Std.HashMap D₀ D₁
@@ -13,7 +13,7 @@ namespace Partition
 
 section Definitions
 #eval (Std.HashMap.ofList [(1,0), (0,2)])
-instance: ToString (Partition D₀ D₁) where
+instance : ToString (Partition D₀ D₁) where
   toString m := m.toList
     |>.map (fun (cond, concl) => s!"{cond} ↦ {concl}")
     |> ",".intercalate
@@ -31,7 +31,7 @@ def add(x y: Partition D₀ D₁): Partition D₀ D₁ :=
 def mul(x y: Partition D₀ D₁): Partition D₀ D₁ :=
   sorry
 
-def neg(x: Partition D₀ D₁): Partition D₀ D₁ :=
+def neg(x : Partition D₀ D₁): Partition D₀ D₁ :=
   sorry
 
 def sub(x y: Partition D₀ D₁): Partition D₀ D₁ :=
@@ -40,23 +40,23 @@ def sub(x y: Partition D₀ D₁): Partition D₀ D₁ :=
 def div(x y: Partition D₀ D₁): Partition D₀ D₁ :=
   sorry
 
-def widen(x y: Partition D₀ D₁)(n: Nat): Partition D₀ D₁ :=
+def widen(x y: Partition D₀ D₁) (n : Nat): Partition D₀ D₁ :=
   sorry
 
-def narrow(x y: Partition D₀ D₁)(n: Nat): Partition D₀ D₁ :=
+def narrow(x y: Partition D₀ D₁) (n : Nat): Partition D₀ D₁ :=
   sorry
 
-def refine (op: Lustrean.CompareOp) (x y: Partition D₀ D₁): Partition D₀ D₁ × Partition D₀ D₁ :=
+def refine (op : Lustrean.CompareOp) (x y: Partition D₀ D₁): Partition D₀ D₁ × Partition D₀ D₁ :=
   sorry
 end Definitions
 
-instance: Add (Partition D₀ D₁) := sorry -- .mk Partition.add
-instance: Mul (Partition D₀ D₁) := sorry -- .mk Partition.mul
-instance: Neg (Partition D₀ D₁) := sorry -- .mk Partition.neg
-instance: Sub (Partition D₀ D₁) := sorry -- .mk Partition.sub
-instance: Div (Partition D₀ D₁) := sorry -- .mk Partition.div
-instance: Widen (Partition D₀ D₁)  where widen a b n  := sorry -- a.widen b n
-instance: Narrow (Partition D₀ D₁) where narrow a b n := sorry -- a.meet b n
+instance : Add (Partition D₀ D₁) := sorry -- .mk Partition.add
+instance : Mul (Partition D₀ D₁) := sorry -- .mk Partition.mul
+instance : Neg (Partition D₀ D₁) := sorry -- .mk Partition.neg
+instance : Sub (Partition D₀ D₁) := sorry -- .mk Partition.sub
+instance : Div (Partition D₀ D₁) := sorry -- .mk Partition.div
+instance : Widen (Partition D₀ D₁)  where widen a b n  := sorry -- a.widen b n
+instance : Narrow (Partition D₀ D₁) where narrow a b n := sorry -- a.meet b n
 
 section GaloisConnection
 end GaloisConnection
@@ -84,7 +84,7 @@ theorem meet_absorption: ∀ (x y: Partition D₀ D₁), x.meet (x.join y) = x:=
 end Theorems
 
 
-instance: BoundedLattice (Partition D₀ D₁) where
+instance : BoundedLattice (Partition D₀ D₁) where
   bot := sorry
   top := sorry
   join := Partition.join
@@ -101,7 +101,7 @@ instance: BoundedLattice (Partition D₀ D₁) where
   join_absorption  := Partition.join_absorption
   meet_absorption  := Partition.meet_absorption
 
-instance: WidenLawful (Partition D₀ D₁) where
+instance : WidenLawful (Partition D₀ D₁) where
   /- NOTE: These theorems are inlined since they depend on
      definitions introduced by the `BoundedLattice` typeclass -/
   covering_left := by sorry
@@ -110,7 +110,7 @@ instance: WidenLawful (Partition D₀ D₁) where
      definitions introduced by the `BoundedLattice` typeclass -/
   covering_right := by sorry
 
-instance: NarrowLawful (Partition D₀ D₁) where
+instance : NarrowLawful (Partition D₀ D₁) where
   /- NOTE: These theorems are inlined since they depend on
      definitions introduced by the `BoundedLattice` typeclass -/
   bounding_high := by sorry
@@ -119,7 +119,7 @@ instance: NarrowLawful (Partition D₀ D₁) where
      definitions introduced by the `BoundedLattice` typeclass -/
   bounding_low := by sorry
 
-instance: ValueDomain (Partition D₀ D₁) where
+instance : ValueDomain (Partition D₀ D₁) where
   nil := sorry
 
   compare op x y := Partition.refine op x y
@@ -151,7 +151,7 @@ section Correctness
 -- : 0 ∉ y.concrete → x.concrete / y.concrete ≤ (x.div y).concrete
 -- := by sorry
 
--- theorem refine_correct (ord: CompareOp)(x y: Partition D₀ D₁)
+-- theorem refine_correct (ord : CompareOp) (x y: Partition D₀ D₁)
 -- : (x.refine ord y).1.concrete ⊆ { e |
 --   e ∈ x.concrete ∧
 --   (∃ e' ∈ y.concrete, ord.toProp e e') }

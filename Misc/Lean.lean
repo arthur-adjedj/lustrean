@@ -22,7 +22,7 @@ def Std.Format.joinSepArray.{u} {α : Type u} [ToFormat α] (xs : Array α) (sep
   else  if _ : xs.size = 1 then
     format xs[0]
   else
-    xs[1:].foldl (· ++ sep ++ format ·) (format xs[0])
+    xs[1 :].foldl (· ++ sep ++ format ·) (format xs[0])
 
 namespace Std
 
@@ -31,7 +31,7 @@ unsafe def ExtDHashMap.unquot {α β} [BEq α] [Hashable α] (h : ExtDHashMap α
 
 /-- Transforms the hash map into a list of mappings in some order.
     /!\ This function uses the unsafe `Quot.unquot`, and thus cannot be unfolded/reasoned upon-/
-def ExtDHashMap.toList {α β} [BEq α] [Hashable α] (h : ExtDHashMap α β) : List ((a: α) × β a) :=
+def ExtDHashMap.toList {α β} [BEq α] [Hashable α] (h : ExtDHashMap α β) : List ((a : α) × β a) :=
   unsafe h.unquot.toList
 
 instance {α β} [BEq α] [Hashable α] [Repr α] [∀ a, Repr (β a)] : Repr (ExtDHashMap α β) where

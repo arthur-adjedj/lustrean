@@ -7,8 +7,8 @@ inductive Integers where
 | int : Int → Integers
 deriving DecidableEq, BEq
 
-instance: Bot (Integers) where bot := .bot
-instance: Top (Integers) where top := .top
+instance : Bot (Integers) where bot := .bot
+instance : Top (Integers) where top := .top
 
 namespace Integers
 def join (x y : Integers) : Integers := match x, y with
@@ -16,14 +16,14 @@ def join (x y : Integers) : Integers := match x, y with
   | .int n, .int m => if n = m then .int n else .top
   | _, _ => .top
 
-instance: Max (Integers) where max := join
+instance : Max (Integers) where max := join
 
 def meet (x y : Integers) : Integers := match x, y with
   | .top, n | n, .top => n
   | .int n, .int m => if n = m then .int n else .bot
   | _, _ => .bot
 
-instance: Min (Integers) where min := meet
+instance : Min (Integers) where min := meet
 
 theorem join_commutative
 : ∀ (x y : Integers), x ⊔ y = y ⊔ x
