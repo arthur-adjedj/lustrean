@@ -130,6 +130,12 @@ def refine (op : CompareOp): Interval → Interval → Interval
   | .ge  => refineLe y x
 | ⊥, _ | _, ⊥ => ⊥
 
+def rand: Option Int → Option Int → Interval
+| .some x, .some y => ofPair x y
+| .none,   .some y => .mk ⊥ y
+| .some x, .none   => .mk x ⊤
+| .none,   .none   => .mk ⊥ ⊤
+
 instance : BoundedLattice Interval := BoundedLattice.ofLatticeAndBoundedOrder
 
 def ofConstantsAndLimit (cts : List Int := []) (limit : Nat := 10) : ValueDomain Interval :=
@@ -137,15 +143,7 @@ def ofConstantsAndLimit (cts : List Int := []) (limit : Nat := 10) : ValueDomain
     (cts := cts) (limit := limit)
   {
     nil := ⊤ -- we have no better approximation for nil in this domain than ⊤
-    rand
-      | .some x, .some y =>
-        if h : x ≤ y then
-          mk x y h
-        else
-          ∅
-      | .none, .some y => .mk ⊥ y <| by constructor
-      | .some x, .none => .mk (x) ⊤ <| by constructor
-      | .none, .none => .mk ⊥ ⊤ <| by constructor
+    rand := rand
     compare op x y := (x.refine op y, y.refine op.symm x)
 
     -- TODO: pourquoi ça n'infère pas ??

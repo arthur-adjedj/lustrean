@@ -342,7 +342,7 @@ deriving LE, Repr, Bot, Top, SemilatticeSup, OrderTop,
 namespace Interval
 
 @[match_pattern]
-abbrev mk(low : WithBot Int) (high : WithTop Int) (h : low ≤∘ high): Interval :=
+abbrev mk(low : WithBot Int) (high : WithTop Int) (h : low ≤∘ high := by constructor): Interval :=
   NonEmpty.mk low high h
 
 @[grind] instance : EmptyCollection Interval where emptyCollection := ⊥
