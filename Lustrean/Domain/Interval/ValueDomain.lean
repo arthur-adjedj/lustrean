@@ -1,12 +1,12 @@
 import Lustrean.Domain.Interval.Defs
 import Lustrean.Domain.Interval.Operations
 
-namespace Lustrean.Interval
+namespace List
 
-private def _root_.List.tighestLowerBound(cts : List Int) (n : WithBot Int): WithBot Int :=
+private def tighestLowerBound(cts : List Int) (n : WithBot Int): WithBot Int :=
   (cts.filter (fun x => ↑(x : Int) ≤ n)).min?
 
-private def _root_.List.tighestLowerBound.spec (cts : List Int) (n : WithBot Int)
+private def tighestLowerBound.spec (cts : List Int) (n : WithBot Int)
 : cts.tighestLowerBound n ≤ n
 := by
   dsimp [List.tighestLowerBound]
@@ -26,10 +26,10 @@ local instance : Std.LawfulOrderLeftLeaningMax Int where
   max_eq_left := by grind
   max_eq_right := by grind
 
-private def _root_.List.tighestUpperBound(cts : List Int) (n : WithTop Int): WithTop Int :=
+private def tighestUpperBound(cts : List Int) (n : WithTop Int): WithTop Int :=
   (cts.filter (fun x => n ≤ ↑(x : Int))).max?
 
-private def _root_.List.tighestUpperBound.spec (cts : List Int) (n : WithTop Int)
+private def tighestUpperBound.spec (cts : List Int) (n : WithTop Int)
 : n ≤ cts.tighestUpperBound n
 := by
   dsimp [List.tighestUpperBound]
@@ -43,6 +43,10 @@ private def _root_.List.tighestUpperBound.spec (cts : List Int) (n : WithTop Int
     rw [List.max?_eq_some_max (by grind only)]
     apply mem_ls
     apply List.max_mem
+
+end List
+
+namespace Lustrean.Interval
 
 def widen (cts : List Int) (limit : Nat) (x y : Interval) (n : Nat): Interval :=
   if n <= limit then
