@@ -681,7 +681,7 @@ def concrete: Interval → Set Int
    See https://leanprover.zulipchat.com/#narrow/channel/217875-Is-there-code-for-X.3F/topic/The.20minimum.20of.20a.20.60Set.60.20if.20it.20exists.20else.20.60bot.60/with/570279925-/
 open Classical in
 noncomputable
-def Set.min?{α: Type}[PartialOrder α](s: Set α)(nonempty: s ≠ ∅ ): WithBot α :=
+def Set.min?{α: Type}[PartialOrder α](s: Set α)(_nonempty: s ≠ ∅ ): WithBot α :=
   if h : ∃ (x: α), IsLeast s x then
     (Classical.choose h: α)
   else
@@ -700,7 +700,7 @@ notation "⨅₂" s:max => Set.min? s (by grind)
 
 open Classical in
 noncomputable
-def Set.max?{α: Type}[PartialOrder α](s: Set α)(nonempty: s ≠ ∅): WithTop α :=
+def Set.max?{α: Type}[PartialOrder α](s: Set α)(_nonempty: s ≠ ∅): WithTop α :=
   if h : ∃ (x: α), IsGreatest s x then
     (Classical.choose h: α)
   else
@@ -836,6 +836,7 @@ def abstract(s: Set Int): Interval :=
 #print BddAbove
 #print BddBelow
 
+attribute [simp] WithBot.coe_le_coe WithTop.coe_le_coe
 
 def gc: GaloisConnection abstract concrete := by
   intros s x
@@ -872,25 +873,38 @@ def gc: GaloisConnection abstract concrete := by
               simp only [WithBot.coe_inj, exists_eq_right, e]
             · exfalso
               rename_i h
-              simp only [IsLeast, lowerBounds, Set.mem_setOf_eq, not_exists,
-                not_and, not_forall, not_le] at h
               have : xl ≤ ⨅₂ s := by
-                apply _root_.Set.le_min?_of_mem
-                sorry
+                apply _root_.Set.le_min? s nonempty xl |>.mpr
+                intros z z_s
+                have ⟨xl_z, z_xh⟩ := hyp z_s
+                apply WithBot.coe_le_coe.mp xl_z
               have := s.bdd_of_le_min? nonempty xl this
-              have ⟨e, e_S⟩ := Set.nonempty_iff_ne_empty.mpr nonempty
-              have ⟨e', e'_S, e'_e⟩ := h e e_S
-              have ⟨xl_e, _⟩ := hyp e'_S
-              -- TODO: One has to reason about infinite sequences.
-              -- Alternatively, I can probably dodge this by just
-              -- stating that if γ s ⊆ [x,y], then BddAbove s and BddBelow s
-              -- are true.
-              -- Something like `BddBelow.exists_isLeast_of_nonempty`
-              sorry
+              have := this.exists_isLeast_of_nonempty (Set.nonempty_iff_ne_empty.mpr nonempty)
+              grind
           have ⟨_,_⟩ := hyp l_S
-          grind
-      · -- Similar to previous case, but with max
-        sorry
+          grind only
+      · match xh with
+        | ⊤ => apply le_top
+        | (xh: Int) =>
+          have ⟨l, l_S, l_eq⟩ : ∃ l ∈ s, l = ⨆₂ s := by
+            fun_cases (⨆₂ s) <;> rename_i h
+            · have ⟨e, h⟩ := Classical.choose_spec h
+              simp only [WithTop.coe_inj, exists_eq_right, e]
+            · exfalso
+              rename_i h
+              have : ⨆₂ s ≤ xh := by
+                apply _root_.Set.max?_le s nonempty xh |>.mpr
+                intros z z_s
+                have ⟨xl_z, z_xh⟩ := hyp z_s
+                apply WithTop.coe_le_coe.mp z_xh
+              have := s.bdd_of_max?_le nonempty xh this
+              have := this.exists_isGreatest_of_nonempty (Set.nonempty_iff_ne_empty.mpr nonempty)
+              grind
+          have ⟨_,_⟩ := hyp l_S
+          -- TODO: Why grind doesn't close on its own? It should work by congruence
+          -- Look into it
+          rw [←l_eq]
+          grind only
 
 
 end Interval
