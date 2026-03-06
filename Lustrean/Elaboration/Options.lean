@@ -8,7 +8,7 @@ namespace Lustrean.Elaboration
 
 open Lean
 
-variable {m: Type → Type} [Monad m] [MonadError m]
+variable {m : Type → Type} [Monad m] [MonadError m]
 
 /--
   Enumeration of all available domains. So far, the

@@ -207,7 +207,7 @@ def getWideningPoints {nb_var : Nat} (cfg : Cfg nb_var) : { arr : Array Bool // 
   ⟨arr, Harr⟩
 end Cfg
 
-structure State (α : Type) [BEq α][ι : Domain α] (cfg : Cfg ι.nb_var) where
+structure State (α : Type) [BEq α] [ι : Domain α] (cfg : Cfg ι.nb_var) where
   node_env : Array α -- holds an environment at each node
   Hnode_env : node_env.size = cfg.nb_nodes
   arc_env : Array α -- holds [[arc.inst]](env) for each arc where env is the environment at arc.src
@@ -217,7 +217,7 @@ structure State (α : Type) [BEq α][ι : Domain α] (cfg : Cfg ι.nb_var) where
   nb_step : Nat
 
 namespace State
-variable {α : Type} [BEq α][ι : Domain α] {cfg : Cfg ι.nb_var}
+variable {α : Type} [BEq α] [ι : Domain α] {cfg : Cfg ι.nb_var}
 
 def getNodeEnv (s : State α cfg) (i : Fin cfg.nb_nodes) : α :=
   s.node_env[s.Hnode_env ▸ i]
@@ -294,10 +294,10 @@ def debug : StateM (State α cfg) Unit := do
 def iter : StateM (State α cfg) Bool := do
   let mut iterate_again := false
   -- debug
-  for h : i in [0:cfg.nb_arcs] do
+  for h : i in [0 :cfg.nb_arcs] do
     let b ← iterArc (.mk' i)
     iterate_again := iterate_again || b
-  for h : i in [0:cfg.nb_nodes] do
+  for h : i in [0 :cfg.nb_nodes] do
     iterNode (.mk' i)
   incrHeartbeat
   return iterate_again
@@ -322,7 +322,7 @@ variable [Lean.MonadLog m] [Lean.AddMessageContext m] [Lean.MonadOptions m]
 
 def checkAssert (s : State α cfg) : m (State α cfg)
 := do
-  for h : i in [0:cfg.nb_arcs] do
+  for h : i in [0 :cfg.nb_arcs] do
     have : i < cfg.arcs.size := Membership.get_elem_helper h cfg.Harcs
     let arc := cfg.arcs[i]
     match arc.inst with

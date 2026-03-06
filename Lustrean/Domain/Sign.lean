@@ -53,7 +53,7 @@ theorem Int.mul_neg_of_div_neg {x y: Int}
   rw [←Int.sign_neg_iff, Int.sign_mul]
   assumption
 
-theorem aux3{x y: Int}(h: x / y < 0)
+theorem aux3{x y: Int}(h : x / y < 0)
 : x > 0 ∧ y < 0 ∨ x < 0 ∧ y > 0
 := (aux ∘ Int.mul_neg_of_div_neg) h
 
@@ -68,7 +68,7 @@ theorem Int.mul_pos_of_div_pos {x y: Int}
   rw [←Int.sign_pos_iff, Int.sign_mul]
   assumption
 
-theorem aux4{x y: Int}(h: x / y > 0)
+theorem aux4{x y: Int}(h : x / y > 0)
 : x > 0 ∧ y > 0 ∨ x < 0 ∧ y < 0
 := (aux2 ∘ Int.mul_pos_of_div_pos) h
 
@@ -86,7 +86,7 @@ structure Sign where mk ::
 namespace Sign
 /-- Seeing elements in `Sign` as a set, the opposite -/
 @[grind]
-abbrev opposite(s: Sign): Sign where
+abbrev opposite(s : Sign): Sign where
   hasZero := ! s.hasZero
   hasPos  := ! s.hasPos
   hasNeg  := ! s.hasNeg
@@ -103,7 +103,7 @@ section elements
 @[grind] def All: Sign := None.opposite
 end elements
 
-instance: Std.ToFormat Sign where format := fun
+instance : Std.ToFormat Sign where format := fun
 |.mk false false  false => "[⊥]"
 |.mk false false  true  => "[<0]"
 |.mk false true   false => "[=0]"
@@ -112,8 +112,8 @@ instance: Std.ToFormat Sign where format := fun
 |.mk true  false  true  => "[≠0]"
 |.mk true  true   false => "[≥0]"
 |.mk true  true   true  => "[⊤]"
-instance: ToString Sign := ⟨toString ∘ Std.format⟩
-instance: Repr Sign := ⟨fun a _ => Std.format a⟩
+instance : ToString Sign := ⟨toString ∘ Std.format⟩
+instance : Repr Sign := ⟨fun a _ => Std.format a⟩
 
 namespace Notation
 scoped notation "[⊥]" => Sign.None
@@ -125,22 +125,22 @@ scoped notation "[≥0]" => Sign.ZeroPos
 scoped notation "[≤0]" => Sign.ZeroNeg
 end Notation
 
-instance: Bot Sign where bot := Sign.None
-instance: Top Sign where top := Sign.All
+instance : Bot Sign where bot := Sign.None
+instance : Top Sign where top := Sign.All
 
 def join(a b: Sign): Sign where
   hasZero := a.hasZero || b.hasZero
   hasPos  := a.hasPos  || b.hasPos
   hasNeg  := a.hasNeg  || b.hasNeg
 
-instance: Max Sign where max := join
+instance : Max Sign where max := join
 
 def meet(a b: Sign): Sign where
   hasZero := a.hasZero && b.hasZero
   hasPos  := a.hasPos  && b.hasPos
   hasNeg  := a.hasNeg  && b.hasNeg
 
-instance: Min Sign where min := meet
+instance : Min Sign where min := meet
 
 def add(a b : Sign): Sign :=
   if a = .None ∨ b = .None then
@@ -156,7 +156,7 @@ def add(a b : Sign): Sign :=
       hasNeg  := a.hasNeg  || b.hasNeg
     }
 
-def neg(a: Sign): Sign := {
+def neg(a : Sign): Sign := {
   a with
   hasNeg := a.hasPos
   hasPos := a.hasNeg
@@ -242,7 +242,7 @@ def refineNE(x y: Sign): Sign := {
   Given x and y and some binary comparison op, returns the restrictions
   x' and y' of x and y of elements for which the comparison may hold.
 -/
-def refine (op: Lustrean.CompareOp) (x y: Sign): Sign × Sign := match op with
+def refine (op : Lustrean.CompareOp) (x y: Sign): Sign × Sign := match op with
   | .eq  => (x.refineEQ y, y.refineEQ x)
   | .lt  => (x.refineLT y, y.refineGT x)
   | .neq => (x.refineNE y, y.refineNE x)
@@ -251,23 +251,23 @@ def refine (op: Lustrean.CompareOp) (x y: Sign): Sign × Sign := match op with
   | .gt  => (x.refineGT y, y.refineLT x)
 
 @[grind =]
-instance: LE Sign := .mk (·.incl · = true)
-instance: Max Sign := .mk Sign.join
-instance: Min Sign := .mk Sign.meet
-instance: Add Sign := .mk Sign.add
-instance: Mul Sign := .mk Sign.mul
-instance: _root_.Neg Sign := .mk Sign.neg
-instance: Sub Sign := .mk Sign.sub
-instance: Div Sign := .mk Sign.div
-instance: Widen Sign  where widen  a b _ := a ⊔ b
-instance: Narrow Sign where narrow a b _ := a ⊓ b
+instance : LE Sign := .mk (·.incl · = true)
+instance : Max Sign := .mk Sign.join
+instance : Min Sign := .mk Sign.meet
+instance : Add Sign := .mk Sign.add
+instance : Mul Sign := .mk Sign.mul
+instance : _root_.Neg Sign := .mk Sign.neg
+instance : Sub Sign := .mk Sign.sub
+instance : Div Sign := .mk Sign.div
+instance : Widen Sign  where widen  a b _ := a ⊔ b
+instance : Narrow Sign where narrow a b _ := a ⊓ b
 
 section GaloisEmbedding
 
 /-! Inclusion of Sign elements establishes a partial order -/
 
 @[grind]
-instance: PartialOrder Sign where
+instance : PartialOrder Sign where
   le_refl := by simp [LE.le, Sign.incl]
   le_trans := by
     intros; simp only [LE.le] at *; grind [Sign.incl]
@@ -289,7 +289,7 @@ open Classical in
   use of it to prove theorems about our operators.
 -/
 @[grind =]
-noncomputable def abstract(X: Set Int): Sign := {
+noncomputable def abstract(X : Set Int): Sign := {
       hasZero := 0 ∈ X
       hasPos := ∃ z ∈ X, z > 0
       hasNeg := ∃ z ∈ X, z < 0
@@ -297,7 +297,7 @@ noncomputable def abstract(X: Set Int): Sign := {
 
 /-- The integer set represented by a particular `Sign` element -/
 @[grind =]
-def concrete(a: Sign): Set Int := setOf λ z ↦
+def concrete(a : Sign): Set Int := setOf λ z ↦
   match compare z 0 with
   | .lt => a.hasNeg
   | .eq => a.hasZero
@@ -402,7 +402,7 @@ theorem meet_is_glb
 
 end Theorems
 
-instance: BoundedLattice Sign where
+instance : BoundedLattice Sign where
   join := Sign.join
   meet := Sign.meet
   join_bot := by simp [Max.max, Bot.bot, Sign.None, Sign.join]
@@ -419,7 +419,7 @@ instance: BoundedLattice Sign where
   join_is_lub := Sign.join_is_lub
   meet_is_glb := Sign.meet_is_glb
 
-instance: WidenLawful Sign where
+instance : WidenLawful Sign where
   /- NOTE: These theorems are inlined since they depend on
      definitions introduced by the `BoundedLattice` typeclass -/
   covering_left := by
@@ -430,7 +430,7 @@ instance: WidenLawful Sign where
   covering_right := by
     simp [BoundedLattice.IsSubset, Widen.widen]
 
-instance: NarrowLawful Sign where
+instance : NarrowLawful Sign where
   /- NOTE: These theorems are inlined since they depend on
      definitions introduced by the `BoundedLattice` typeclass -/
   bounding_high := by
@@ -441,7 +441,7 @@ instance: NarrowLawful Sign where
   bounding_low := by
     simp [BoundedLattice.IsSubset, Narrow.narrow]
 
-instance: ValueDomain Sign where
+instance : ValueDomain Sign where
   nil := .All
 
   compare op x y := Sign.refine op x y
@@ -521,7 +521,7 @@ def neg_complete
 -- grind_pattern neg_complete => a.neg.concrete
 
 @[grind =] -- The grind attribute does not go through `abbrev`s?
-theorem concrete_neg (a: Sign): a.neg.concrete = -a.concrete := neg_complete a |>.symm
+theorem concrete_neg (a : Sign): a.neg.concrete = -a.concrete := neg_complete a |>.symm
 
 -- TODO: Consider how one can define theorems about
 -- composing abstractions (probably should live in GaloisConnection)
@@ -665,7 +665,7 @@ theorem refineNE_correct (x y: Sign)
       simp only [Sign.concrete, Set.mem_setOf_eq] at *
       grind
 
-theorem refine_1_correct (ord: CompareOp)(x y: Sign)
+theorem refine_1_correct (ord : CompareOp) (x y: Sign)
 : (x.refine ord y).1.concrete ⊆ { e |
   e ∈ x.concrete ∧
   (∃ e' ∈ y.concrete, ord.toProp e e') }
@@ -678,7 +678,7 @@ theorem refine_1_correct (ord: CompareOp)(x y: Sign)
   · grind [refineGE_correct]
   · grind [refineGT_correct]
 
-theorem refine_2_correct (ord: CompareOp)(x y: Sign)
+theorem refine_2_correct (ord : CompareOp) (x y: Sign)
 : (x.refine ord y).2.concrete ⊆ { e' |
   e' ∈ y.concrete ∧
   (∃ e ∈ x.concrete, ord.toProp e e') }

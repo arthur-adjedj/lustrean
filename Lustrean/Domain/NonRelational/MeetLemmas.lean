@@ -6,7 +6,7 @@ variable [ι : ValueDomain α]
 variable (x y z : NonRelational α n)
 
 @[simp]
-theorem _root_.Vector.ofFn_getElem_self{α: Type}{n: Nat}(v: Vector α n)
+theorem _root_.Vector.ofFn_getElem_self{α : Type}{n : Nat}(v : Vector α n)
 : Vector.ofFn (fun i => v[i.val] ) = v
 := by ext; simp [getElem]
 

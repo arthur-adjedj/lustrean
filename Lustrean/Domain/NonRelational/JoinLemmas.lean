@@ -38,7 +38,7 @@ theorem join_top : x ⊔ top = top := by
   case non_rel n env =>
     obtain ⟨env, prop⟩ := env
     -- have: Decidable (⊤ = ⊥):= ι.dec_bot ⊤
-    if h: (⊤: α) = ⊥ then
+    if h: (⊤ : α) = ⊥ then
       exfalso
       apply prop 0
       apply BoundedLattice.trivial_of_top_eq_bot h

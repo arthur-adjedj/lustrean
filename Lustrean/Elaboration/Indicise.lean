@@ -182,9 +182,9 @@ def elabNode (nod : &Inline.Node) : CoreM (&Node) :=
   let n := input_vars.size
   let m := bound_vars.size
   let mut env : HashMap Name (VarRef n m) := {}
-  for h : i in [0:n] do
+  for h : i in [0 :n] do
     env := env.insert input_vars[i].name <| .input_var ⟨i, Membership.get_elem_helper h rfl⟩
-  for h : i in [0:m] do
+  for h : i in [0 :m] do
     env := env.insert bound_vars[i].name <| .bound_var ⟨i, Membership.get_elem_helper h rfl⟩
   let input_vars := input_vars.map fun { name, } => { name }
   let bound_vars ← bound_vars.mapM fun var => do

@@ -378,7 +378,7 @@ def elabNode (nod : &Indicise.Node) : CoreM &Node :=
     guards := #[]
     asserts := #[]
   }, rfl, by simp⟩
-  for h : i in [0:nod.m] do
+  for h : i in [0 :nod.m] do
     let e : Indicise.Expr new_nod.val.n new_nod.val.m :=
       new_nod.property.1 ▸ nod.bound_vars[i].value.value.upcast new_nod.property.2
     let { m', e, nod := ⟨hnod, hnod_m_m', hnod_n_nod_n⟩, m_leq_m', .. } ←
