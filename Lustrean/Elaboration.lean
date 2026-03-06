@@ -36,15 +36,12 @@ def elabLustre (nodes : TSyntaxArray `lustre_node) : ReaderT Options CommandElab
       let opts ← read
       match opts.dom with
       | .UndefinedInterval =>
-<<<<<<< fele/refactor/change-defs-to-mathlib
         have : ValueDomain Interval := Interval.ofConstantsAndLimit (cts := []) (limit := 10)
-        let state ← withRef ref do State.run (m := CoreM) (α := NonRelational (Undefined Interval) n) cfg
+        let state ← liftCoreM <| withRef ref do
+          State.run (m := CoreM) (α := NonRelational (Undefined Interval) n) cfg
         -- println! "Step ∞"
         -- for (env, i) in state.node_env.zipIdx do
         --   dbg_trace s!" {i}) {env}"
-=======
-        let state ← liftCoreM <| withRef ref do State.run (m := CoreM) (α := NonRelational (Undefined (Interval [])) n) cfg
->>>>>>> release
         let some env := state.node_env.back? | continue
         for ⟨var, ref⟩ in output_vars do
           let val := env.get var
@@ -69,9 +66,5 @@ elab_rules : command
 end Lustrean.Elaboration
 
 initialize
-<<<<<<< fele/refactor/change-defs-to-mathlib
-  registerTraceClass `Lustrean.Elab  (inherited := true)
-=======
   registerTraceClass `Lustrean.Elab.DOT  (inherited := true)
   registerTraceClass `Lustrean.Elab  (inherited := true)
->>>>>>> release
