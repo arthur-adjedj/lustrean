@@ -28,21 +28,40 @@ notation x:60 "≤∘" y:61 => hle x y
 --   | _, ⊤ => simp
 --   | (a : α), (b : α) => grind
 
-instance {α : Type} [LE α] [ι : DecidableLE α] : DecidableRel (hle (α := α))
+instance [ι : DecidableLE α] : DecidableRel (hle (α := α))
 | (x : α), (y : α) => ι x y
 | ⊥, _ | _, ⊤ => by simp; infer_instance
 
+@[simp]
+def hle_iff_coe_le(x: α)(y: WithTop α): x ≤∘ y ↔ x ≤ y := by
+  constructor; all_goals (
+    cases y
+    · intro _; constructor
+    · simp only [coe_hle_coe, WithTop.coe_le_coe, imp_self]
+  )
+
+@[simp]
+def hle_iff_le_coe(x: WithBot α)(y: α): x ≤∘ y ↔ x ≤ y := by
+  constructor; all_goals (
+    cases x
+    · intro _; constructor
+    · simp only [coe_hle_coe, coe_le_coe, imp_self]
+  )
+
+@[simp]
+def hle_refl(x: α)[Std.IsPreorder α]: (x: WithBot α) ≤∘ (x: WithTop α) := by
+  rw [coe_hle_coe]
+
 instance instLeHle
-  {α : Type} [LE α]
   [ι : Trans (LE.le (α := α)) (LE.le (α := α)) (LE.le (α := α))]
   : Trans (LE.le (α := WithBot α)) hle hle
 where
     trans := by
         intros x y z
-        match x, y, z with
-        | x, ⊥, z => simp only [WithBot.le_bot_iff, hle, forall_const]; rintro rfl; dsimp
-        | x, (y : α), ⊤ => cases x <;> simp
-        | x, (y : α), (z : α) =>
+        match y, z with
+        | ⊥, z => simp only [WithBot.le_bot_iff, hle, forall_const]; rintro rfl; dsimp
+        | (y : α), ⊤ => cases x <;> simp
+        | (y : α), (z : α) =>
           cases x <;> simp [hle]
           intro h_y hyz
           apply ι.trans
@@ -50,48 +69,91 @@ where
           · apply hyz
 
 instance instHleLe
-  {α : Type} [LE α]
   [ι : Trans (LE.le (α := α)) (LE.le (α := α)) (LE.le (α := α))]
   : Trans hle (LE.le (α := WithTop α)) hle
 where
     trans := by
         intros x y z
-        match x, y, z with
-        | x, y, ⊤ => cases x <;> simp
-        | x, ⊤, (z : α) => simp
-        | x, (y : α), (z : α) =>
+        match y, z with
+        | y, ⊤ => cases x <;> simp only [bot_hle, le_top, hle_top, imp_self, implies_true]
+        | ⊤, (z : α) => simp
+        | (y : α), (z : α) =>
           cases x <;> simp [hle]
           intro h_y hyz
           apply ι.trans
           · apply h_y
           · apply hyz
 
+@[simp, grind =] theorem max_hle_iff {α: Type}[semilattice: SemilatticeSup α]
+  [ι : Trans (LE.le (α := α)) (LE.le (α := α)) (LE.le (α := α))]
+ (x y : WithBot α)(z: WithTop α)
+: max x y ≤∘ z ↔ x ≤∘ z ∧ y ≤∘ z
+:= by
+  constructor
+  · intros hyp
+    constructor
+    · calc x ≤  x ⊔ y := by apply le_sup_left
+          _ ≤∘ z     := by assumption
+    · calc y ≤  x ⊔ y := by apply le_sup_right
+          _ ≤∘ z     := by assumption
+  · rintro ⟨h₁, h₂⟩
+    match z, x, y with
+    | (z: α), (x: α), (y: α) =>
+      apply sup_le <;> assumption
+    | ⊤, _, _ =>
+      apply hle_top
+    | _, _, ⊥
+    | _, ⊥, _ =>
+      simp only [bot_le, sup_of_le_left, sup_of_le_right, *]
+
 def hMax {α : Type} [Max α] : WithBot α → WithTop α → WithTop α
 | (x : α), (y : α) => (x ⊔ y : α)
 | _, y => y
 
-@[simp] theorem hMax_top{α : Type} [Max α](x : WithBot α)
+@[simp, grind =] theorem hMax_top{α : Type} [Max α](x : WithBot α)
 : WithBot.hMax x ⊤ = ⊤
 := by cases x <;> rfl
 
-@[simp] theorem coe_hMax_coe{α : Type} [Max α](x y: α)
+@[simp, grind =] theorem coe_hMax_coe{α : Type} [Max α](x y: α)
 : WithBot.hMax x y = WithTop.some (x ⊔ y: α)
 := rfl
+
+
+@[simp, grind =] theorem hle_min_iff {α: Type}[semilattice: SemilatticeInf α]
+  [ι : Trans (LE.le (α := α)) (LE.le (α := α)) (LE.le (α := α))]
+ (x y : WithTop α)(z: WithBot α)
+: z ≤∘ min x y ↔ z ≤∘ x ∧ z ≤∘ y
+:= by
+  constructor
+  · intros hyp
+    constructor
+    · calc z ≤∘ x ⊓ y := by assumption
+          _ ≤  x     := by apply inf_le_left
+    · calc z ≤∘ x ⊓ y := by assumption
+          _ ≤  y     := by apply inf_le_right
+  · rintro ⟨h₁, h₂⟩
+    match z, x, y with
+    | (z: α), (x: α), (y: α) =>
+      apply le_inf <;> assumption
+    | ⊥, _, _ =>
+      apply bot_hle
+    | _, _, ⊤
+    | _, ⊤, _ =>
+      simp only [le_top, inf_of_le_left, inf_of_le_right, *]
 
 def hMin {α : Type} [Min α] : WithBot α → WithTop α → WithBot α
 | (x : α), (y : α) => (x ⊓ y : α)
 | x, _ => x -- Cannot fuse with case above because they're different ⊥'s
 
-@[simp] theorem bot_hMin{α : Type} [Min α](x : WithTop α)
+@[simp, grind =] theorem bot_hMin{α : Type} [Min α](x : WithTop α)
 : WithBot.hMin ⊥ x = ⊥
 := rfl
 
-@[simp] theorem coe_hMin_coe{α : Type} [Min α](x y: α)
+@[simp, grind =] theorem coe_hMin_coe{α : Type} [Min α](x y: α)
 : WithBot.hMin x y = WithBot.some (x ⊓ y: α)
 := rfl
 
 end WithBot
-
 
 namespace Lustrean
 
