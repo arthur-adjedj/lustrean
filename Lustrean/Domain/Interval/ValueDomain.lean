@@ -1,3 +1,4 @@
+import Lustrean.Domain.NonRelational
 import Lustrean.Domain.Interval.Defs
 import Lustrean.Domain.Interval.Operations
 import Mathlib.Algebra.Order.Monoid.Unbundled.WithTop -- For one instance
