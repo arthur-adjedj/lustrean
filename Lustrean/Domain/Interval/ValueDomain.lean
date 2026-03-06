@@ -1,5 +1,6 @@
 import Lustrean.Domain.Interval.Defs
 import Lustrean.Domain.Interval.Operations
+import Mathlib.Algebra.Order.Monoid.Unbundled.WithTop -- For one instance
 
 namespace List
 
@@ -117,21 +118,28 @@ def refineEq: NonEmpty → NonEmpty → Interval
 | x, y => x ⊓ y
 
 def refineLe: NonEmpty → NonEmpty → Interval
-| ⟨(xl,_),_⟩, ⟨(_,yh), _⟩ =>
-  ofPair xl (xl ⊓ yh)
+| .mk xl xh _, .mk _ yh _  =>
+  ofPair xl (xh ⊓ yh)
 
 def refineLt: NonEmpty → NonEmpty → Interval
-| x, y => (refineLe (x + 1) y) - ↑(1 : NonEmpty)
+| x, y => (refineLe (x + ↑1) y) - ↑(1 : NonEmpty)
+
+def refineGe: NonEmpty → NonEmpty → Interval
+| .mk xl xh _, .mk yl _ _  =>
+  ofPair (xl ⊔ yl) xh
+
+def refineGt: NonEmpty → NonEmpty → Interval
+| x, y => (refineGe (x - ↑1) y) + ↑(1 : NonEmpty)
 
 def refine (op : CompareOp): Interval → Interval → Interval
 | (x : NonEmpty), (y : NonEmpty) =>
   match op with
   | .eq  => refineEq x y
-  | .lt  => refineLt x y
   | .le  => refineLe x y
-  | .neq => refineLt x y ⊔ refineLt y x
-  | .gt  => refineLt y x
-  | .ge  => refineLe y x
+  | .lt  => refineLt x y
+  | .ge  => refineGe x y
+  | .gt  => refineGt x y
+  | .neq => refineLt x y ⊔ refineGt x y
 | ⊥, _ | _, ⊥ => ⊥
 
 def rand: Option Int → Option Int → Interval
