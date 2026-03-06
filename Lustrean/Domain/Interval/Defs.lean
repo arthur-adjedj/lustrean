@@ -4,20 +4,20 @@ import Mathlib.Order.BoundedOrder.Lattice
 
 import Lean
 
--- set_option trace.profiler true
 namespace WithBot
+variable{α : Type} [LE α]
 
 def hle{α : Type} [LE α] : WithBot α → WithTop α → Prop
   | (x : α), (y : α) => x ≤ y
   | _, _ => True
 
-notation x:60 "≤∘" y:61 => hle x y
+notation x:60 " ≤∘ " y:61 => hle x y
 
-@[simp, grind .] theorem hle_top {α : Type} [LE α] : ∀ (x : WithBot α), x ≤∘ ⊤
-  := by rintro ⟨⟩ <;> simp only [hle]
-@[simp, grind .] theorem bot_hle {α : Type} [LE α] : ∀ (x : WithTop α), ⊥ ≤∘ x
-  := by intro; simp only [hle]
-@[simp, grind =] theorem coe_hle_coe {α : Type} [LE α] (x y: α): (x ≤∘ (y : WithTop α)) = (x ≤ y)
+@[simp, grind .] theorem hle_top : ∀ (x : WithBot α), x ≤∘ ⊤
+  := by rintro ⟨_ | _⟩ <;> dsimp only [hle]
+@[simp, grind .] theorem bot_hle : ∀ (x : WithTop α), ⊥ ≤∘ x
+  := by intro; dsimp only [hle]
+@[simp, grind =] theorem coe_hle_coe (x y: α): (x ≤∘ (y : WithTop α)) = (x ≤ y)
   := rfl
 
 -- theorem not_hle {α : Type} [LinearOrder α] (x : WithBot α) (y : WithTop α)
@@ -255,11 +255,13 @@ instance : OrderTop Interval.NonEmpty where
     dsimp [instLE]
     constructor <;> simp only [le_top, bot_le]
 
+@[simp]
 instance {α : Type} [Sub α] : HSub (WithTop α) (WithBot α) (WithTop α) where
   hSub
   | (x : α), (y : α) => x - y
   | _, _ => ⊤
 
+@[simp]
 instance {α : Type} [Sub α] : HSub (WithBot α) (WithTop α) (WithBot α) where
   hSub
   | (x : α), (y : α) => x - y

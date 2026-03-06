@@ -244,8 +244,11 @@ instance : SemilatticeInf α where
 
 instance : Lattice α where
 
-/- Alternative definition -/
-def other : Lattice α := Lattice.mk'
+/- Alternative definition for the Lattice instance of
+   BoundedLattice.
+
+   TODO: Consider whether this is better  -/
+private def alternativeInstance : Lattice α := Lattice.mk'
   (sup_comm     := join_commutative)
   (sup_assoc    := join_associative)
   (inf_comm     := meet_commutative)

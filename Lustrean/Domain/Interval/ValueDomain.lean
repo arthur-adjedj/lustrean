@@ -157,12 +157,4 @@ def ofConstantsAndLimit (cts : List Int := []) (limit : Nat := 10) : ValueDomain
     nil := ⊤ -- we have no better approximation for nil in this domain than ⊤
     rand := rand
     compare op x y := (x.refine op y, y.refine op.symm x)
-
-    -- TODO: pourquoi ça n'infère pas ??
-    covering_left := WidenLawful.covering_left
-    covering_right := WidenLawful.covering_right
-
-    -- TODO: pourquoi ça n'infère pas ??
-    bounding_low := NarrowLawful.bounding_low
-    bounding_high := NarrowLawful.bounding_high
   }
