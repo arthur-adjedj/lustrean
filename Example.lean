@@ -1,12 +1,8 @@
 import Lustrean
 
-lustre (domain := Sign)
-  node f(x₁) = x₂
-  guard  x₁ ≥ 0
-  where  x₂ = x₁ + 1
-  assert x₂ > 0
 
 lustre
+<<<<<<< fele/refactor/change-defs-to-mathlib
   node inc(x) = o where
     o = x + 1
 
@@ -107,3 +103,8 @@ lustre
 
 lustre
   node f() where
+=======
+  node f(x) = y
+  where   y = if x ≥ 0 then x + 1 else x - 1
+  assert  y ≠ 0
+>>>>>>> release

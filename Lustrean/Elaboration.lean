@@ -7,40 +7,49 @@ import Lustrean.Elaboration.Options
 import Lustrean.Interpreter
 import Lustrean.Domain.Interval
 import Lustrean.Domain.Sign
+import Misc.Graphviz
 
 open Lean
-open Elab (liftMacroM)
-open Elab.Command (liftTermElabM)
+open Elab (liftMacroM TermElabM)
+open Elab.Command (liftCoreM CommandElabM )
 
 namespace Lustrean.Elaboration
 
-def elabLustre (nodes : TSyntaxArray `lustre_node) : ReaderT Options CoreM Unit := do
-  let nodes :=
-    ← Compile.elabLustre <|
+def elabNodes (nodes : TSyntaxArray `lustre_node) : CoreM (Array &Compile.Node) := do
+    Compile.elabLustre <|
     ← Normalize.elabLustre <|
     ← Indicise.elabLustre <|
     ← Inline.elabLustre <|
     ← Reify.elabLustre <|
     nodes
+
+def shouldPrintDot : CoreM Bool := do
+  getBoolOption `trace.Lustrean.Elab.DOT
+
+def elabLustre (nodes : TSyntaxArray `lustre_node) : ReaderT Options CommandElabM Unit := do
+  let nodes ← liftCoreM (elabNodes nodes)
   for ⟨out@⟨n, vertices, output_vars⟩,ref⟩ in nodes do
-      trace[Lustrean.Elab] s!"{out.toDot}\n# To visualize DOT diagrams, use https://magjac.com/graphviz-visual-editor/"
+      -- trace[Lustrean.Elab] s!"{out.toDot}\n# To visualize DOT diagrams, use https://magjac.com/graphviz-visual-editor/"
+      if ← liftCoreM shouldPrintDot then
+        mkHtmlDotStx ref out.toDot
       let some cfg := Cfg.new vertices.toList | continue
-      -- println! s!"{cfg.arcs}"
       let opts ← read
       match opts.dom with
       | .UndefinedInterval =>
+<<<<<<< fele/refactor/change-defs-to-mathlib
         have : ValueDomain Interval := Interval.ofConstantsAndLimit (cts := []) (limit := 10)
         let state ← withRef ref do State.run (m := CoreM) (α := NonRelational (Undefined Interval) n) cfg
         -- println! "Step ∞"
         -- for (env, i) in state.node_env.zipIdx do
         --   dbg_trace s!" {i}) {env}"
+=======
+        let state ← liftCoreM <| withRef ref do State.run (m := CoreM) (α := NonRelational (Undefined (Interval [])) n) cfg
+>>>>>>> release
         let some env := state.node_env.back? | continue
         for ⟨var, ref⟩ in output_vars do
           let val := env.get var
-          -- println! s!"Checking {i}-th variable {var}: {val}..."
           if val.may_be_nil then
             logErrorAt ref s!"variable {ref.getId} could be nil"
-            -- println! s!"  The {i}-th output variable can be nil."
       | .Sign =>
         let state ← withRef ref do State.run (α := NonRelational (Lustrean.Sign) n) cfg
         let some env := state.node_env.back? | continue
@@ -56,8 +65,13 @@ elab_rules : command
     let nodes ← nodes.mapM fun nod => do
       let nod ← liftMacroM <| expandMacros nod.raw
       return .mk nod
-    liftTermElabM <| (elabLustre nodes).run opts
+    (elabLustre nodes).run opts
 end Lustrean.Elaboration
 
 initialize
+<<<<<<< fele/refactor/change-defs-to-mathlib
   registerTraceClass `Lustrean.Elab  (inherited := true)
+=======
+  registerTraceClass `Lustrean.Elab.DOT  (inherited := true)
+  registerTraceClass `Lustrean.Elab  (inherited := true)
+>>>>>>> release

@@ -28,8 +28,10 @@
 \setbeamertemplate{itemize items}[square]
 \setbeamertemplate{enumerate items}[default]
 
-\newfontfamily\NHLight[ItalicFont = HelveticaNeueLT Std Thin]{Helvetica Neue LT Std}
-\newcommand\textulf[1]{{\NHLight\textit#1}}
+% \newfontfamily\NHLight[ItalicFont = HelveticaNeueLT Std Thin]{Helvetica Neue LT Std}
+\newcommand\textulf[1]{{
+    %\NHLight
+    \textit#1}}
 
 \newcommand{\lustrean}[1]{\scalebox{#1}{%
   \begin{tikzpicture}%

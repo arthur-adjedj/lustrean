@@ -1,13 +1,16 @@
 import Lustrean
+import Lean
 
+open Lean Elab Command
 
-#guard_msgs in
+set_option trace.Lustrean.Elab.DOT true
 lustre
   node inc(x) = o where
     o = x + 1
 
   node plus2(x) = o where
     o = inc(inc(x))
+
 
 /-- error: assert failed under #[[1; +∞], [-∞; +∞], [2; +∞], [-∞; +∞]] -/
 #guard_msgs in
