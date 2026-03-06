@@ -1,4 +1,3 @@
-import Lustrean.Domain.NonRelational
 import Mathlib.Order.WithBot
 import Mathlib.Order.BoundedOrder.Lattice
 
@@ -50,7 +49,7 @@ def hle_iff_le_coe(x: WithBot α)(y: α): x ≤∘ y ↔ x ≤ y := by
 
 @[simp]
 def hle_refl(x: α)[Std.IsPreorder α]: (x: WithBot α) ≤∘ (x: WithTop α) := by
-  rw [coe_hle_coe]
+  simp only [coe_hle_coe, Std.IsPreorder.le_refl]
 
 instance instLeHle
   [ι : Trans (LE.le (α := α)) (LE.le (α := α)) (LE.le (α := α))]
