@@ -1,5 +1,6 @@
 import Lustrean.Elaboration.Syntax
 import Misc.Lean
+import Batteries.Data.HashMap
 
 open Lean Meta Elab
 
@@ -13,9 +14,6 @@ structure WithRef (α : Type _) where
 
 namespace WithRef
 prefix:arg "&" => WithRef
-
--- instance (α : Type _) : Coe (&α) α where
-  -- coe := value
 
 instance (α : Type _) : CoeSort &α α where
   coe := value
@@ -181,6 +179,9 @@ instance : ToString BinOp where
   toString := BinOp.toString
 end BinOp
 
+instance {α : Type} [BEq α] : BEq (WithRef α) where
+  beq a b := a.value == b.value
+
 mutual
 inductive Expr where
   | interval (lb : &LowerBound) (up : &UpperBound)
@@ -218,9 +219,11 @@ instance : ToString Expr where
 instance : ToString BoolExpr where
   toString := BoolExpr.toString
 
+deriving instance BEq for Name
+
 structure Variable where
   name : &Name
-  deriving Repr, Inhabited
+  deriving Repr, Inhabited, BEq
 
 structure BoundVars where
   names : Array (&Name)
@@ -353,6 +356,15 @@ partial def elabBoolExpr (s : TSyntax `lustre_assertion) : CoreM (&BoolExpr) :=
       withRef ref throwUnsupportedSyntax
 end
 
+instance {α : Type} [Hashable α] : Hashable (WithRef α) where
+  hash w := hash w.value
+
+deriving instance Hashable for Name
+
+def intersect {α : Type} [BEq α] [Hashable α] (as bs : Array α) : Array α :=
+  let setB := Std.HashSet.insertMany (Std.HashSet.emptyWithCapacity bs.size) bs
+  as.filter (fun x => setB.contains x)
+
 def elabNode (s : TSyntax `lustre_node) : CoreM (&Node) :=
   withTraceNode `Lustrean.Elab.Reify
     (msg := fun e =>
@@ -362,13 +374,28 @@ def elabNode (s : TSyntax `lustre_node) : CoreM (&Node) :=
                    where $decls* $[assert $asserts*]?) =>
     let name := ⟨name.getId, name⟩
     let input_vars := inputs.getElems.map fun x => ⟨x.getId, x⟩
+
+    /- we reject programs with input having repetitions -/
+    if !input_vars.allDiff then throwIllFormedSyntax
+
     let bound_vars ← decls.mapM fun
       | `(lustre_node_decl| $vars:ident,* = $expr:lustre_expr) => do pure {
         names := vars.getElems.map fun var => ⟨var.getId, var⟩
         value := ← elabExpr expr
       }
       | ref => withRef ref throwUnsupportedSyntax
-    let output_vars := output_vars.map (·.getElems.map (fun var => ⟨var.getId, var⟩)) |>.getD default
+
+    /- we reject programs with multiple redefinitions of the same variable -/
+    if !(bound_vars.map (BoundVars.names)).allDiff then throwIllFormedSyntax
+
+    let output_vars : Array &Name := output_vars.map (·.getElems.map (fun var => ⟨var.getId, var⟩)) |>.getD default
+
+    /- we reject programs with output having repetitions -/
+    if !output_vars.allDiff then throwIllFormedSyntax
+
+    /- we reject programs with input ∩ output ≠ ø -/
+    if !(intersect (input_vars.map (Variable.name) ) output_vars).isEmpty then throwIllFormedSyntax
+
     let guards ← guards.getD #[] |>.mapM elabBoolExpr
     let asserts ← asserts.getD #[] |>.mapM elabBoolExpr
     return ⟨{name, input_vars, bound_vars, output_vars, guards, asserts}, s⟩
